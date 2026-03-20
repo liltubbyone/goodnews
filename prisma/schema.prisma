@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  createdAt     DateTime       @default(now())
+  savedArticles SavedArticle[]
+  preference    UserPreference?
+}
+
+model SavedArticle {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String
+  savedAt   DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+}
+
+model UserPreference {
+  id         String @id @default(cuid())
+  userId     String @unique
+  regions    String @default("[]") @db.Text
+  categories String @default("[]") @db.Text
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FetchedArticle {
+  id              String   @id @default(cuid())
+  externalId      String   @unique @db.Text
+  title           String   @db.Text
+  summary         String   @db.Text
+  content         String   @default("") @db.Text
+  sourceUrl       String   @db.Text
+  sourceName      String
+  region          String   @default("Global")
+  country         String   @default("International")
+  category        String   @default("Community")
+  tags            String   @default("[]") @db.Text
+  publishedAt     DateTime
+  imageUrl        String   @default("") @db.Text
+  positivityScore Int      @default(50)
+  trending        Boolean  @default(false)
+  featured        Boolean  @default(false)
+  readTime        Int      @default(3)
+  fetchedAt       DateTime @default(now())
+}
