@@ -1,1 +1,1 @@
-{"status":"error","results":{"message":"You can't use the limit parameter in the /1/news endpoint.","code":"UnsupportedParameter"}}
+{"status":"error","results":{"message":"The size provided is invalid, For more information, please refer to our documentation at: https://newsdata.io/documentation","code":"UnsupportedFilter"}}
