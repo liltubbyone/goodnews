@@ -2,7 +2,7 @@ name: Daily Articles Fetch
 
 on:
   schedule:
-    - cron: '15 6 * * *'  # Runs daily at 12:15 AM CST (6:15 AM UTC)
+    - cron: '15 6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
 
       - name: Fetch articles from News Data API
         run: |
-          curl -X GET 'https://newsdata.io/api/1/news?apikey=pub_eae24b22627b43a28d515ea2dc1f33e1&country=us&size=50' \
+          curl -s 'https://newsdata.io/api/1/news?apikey=pub_eae24b22627b43a28d515ea2dc1f33e1&country=us&language=en' \
           -H 'Accept: application/json' \
           -o articles.json
 
