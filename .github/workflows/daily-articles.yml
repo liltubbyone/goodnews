@@ -3,16 +3,16 @@ name: Daily Articles Fetch
 on:
   schedule:
     - cron: '15 6 * * *'  # Runs daily at 12:15 AM CST (6:15 AM UTC)
-  workflow_dispatch:     # Allows manual trigger
+  workflow_dispatch:
 
 jobs:
   fetch_articles:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch articles from News Data API
         run: |
