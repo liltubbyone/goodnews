@@ -2,7 +2,7 @@ name: Daily Articles Fetch
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # Runs daily at 2 AM UTC
+    - cron: '15 6 * * *'  # Runs daily at 12:15 AM CST (6:15 AM UTC)
   workflow_dispatch:     # Allows manual trigger
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fetch articles from News Data API
         run: |
