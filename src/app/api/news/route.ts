@@ -52,8 +52,13 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get('category') ?? 'All'
   const type = searchParams.get('type')
 
-  // Fetch live articles from DB (most recent 100)
+  // Only return articles published in the last 3 months
+  const threeMonthsAgo = new Date()
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+
+  // Fetch live articles from DB (most recent 100, within 3-month window)
   const dbRows = await prisma.fetchedArticle.findMany({
+    where: { publishedAt: { gte: threeMonthsAgo } },
     orderBy: { publishedAt: 'desc' },
     take: 100,
   })

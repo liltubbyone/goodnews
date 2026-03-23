@@ -5,6 +5,13 @@ import { scorePositivity, categorizeArticle, detectRegion } from './positiveFilt
 const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY
 const NEWSDATA_BASE = 'https://newsdata.io/api/1/news'
 
+// Articles older than 3 months are excluded everywhere
+function threeMonthsAgo(): Date {
+  const d = new Date()
+  d.setMonth(d.getMonth() - 3)
+  return d
+}
+
 // Category + keyword pairs that surface positive news via NewsData.io
 // NewsData.io free: 200 credits/day — each request = 1 credit, returns up to 10 articles
 const FETCH_CONFIGS = [
@@ -51,6 +58,7 @@ export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; st
     return { fetched: 0, stored: 0 }
   }
 
+  const cutoff = threeMonthsAgo()
   const candidates: (NewsdataArticle & { score: number })[] = []
   const seenIds = new Set<string>()
 
@@ -73,6 +81,13 @@ export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; st
 
       for (const article of data.results as NewsdataArticle[]) {
         if (!article.title || !article.link || seenIds.has(article.article_id)) continue
+
+        // Skip articles older than 3 months
+        if (article.pubDate) {
+          const pubDate = new Date(article.pubDate)
+          if (!isNaN(pubDate.getTime()) && pubDate < cutoff) continue
+        }
+
         seenIds.add(article.article_id)
 
         const summary = article.description ?? article.title
@@ -101,6 +116,8 @@ export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; st
       const seed = article.article_id.slice(-8)
       const imageUrl = buildImageUrl(article.image_url, seed)
 
+      const pubDate = article.pubDate ? new Date(article.pubDate) : new Date()
+
       await prisma.fetchedArticle.upsert({
         where: { externalId: article.link },
         update: { positivityScore: article.score, trending: article.score >= 85 },
@@ -115,7 +132,7 @@ export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; st
           country: loc.country,
           category,
           tags: JSON.stringify([category.toLowerCase(), loc.region.toLowerCase()]),
-          publishedAt: new Date(article.pubDate ?? new Date()),
+          publishedAt: pubDate,
           imageUrl,
           positivityScore: article.score,
           trending: article.score >= 85,
@@ -131,6 +148,18 @@ export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; st
 
   console.log(`[GoodNews] Scored ${candidates.length} positive articles → stored ${stored}`)
   return { fetched: candidates.length, stored }
+}
+
+// Remove articles older than 3 months from the database
+export async function cleanupOldArticles(): Promise<number> {
+  const cutoff = threeMonthsAgo()
+  const result = await prisma.fetchedArticle.deleteMany({
+    where: { publishedAt: { lt: cutoff } },
+  })
+  if (result.count > 0) {
+    console.log(`[GoodNews] Cleaned up ${result.count} articles older than 3 months`)
+  }
+  return result.count
 }
 
 export async function getLastFetchTime(): Promise<Date | null> {

@@ -2,7 +2,7 @@ name: Daily Articles Fetch
 
 on:
   schedule:
-    - cron: '15 6 * * *'
+    - cron: '30 6 * * *'   # 12:30 AM CST (UTC-6) / 1:30 AM CDT (UTC-5)
   workflow_dispatch:
 
 jobs:
@@ -14,22 +14,72 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch articles from News Data API
+      - name: Fetch articles from multiple categories
         run: |
-          curl -s 'https://newsdata.io/api/1/news?apikey=pub_eae24b22627b43a28d515ea2dc1f33e1&country=us&language=en' \
-          -H 'Accept: application/json' \
-          -o articles.json
+          API_KEY="pub_eae24b22627b43a28d515ea2dc1f33e1"
+          BASE="https://newsdata.io/api/1/news?apikey=${API_KEY}&language=en"
 
-      - name: Create public directory and move file
+          curl -s "${BASE}&category=science&q=breakthrough+discovery+innovation"     -o /tmp/cat1.json
+          sleep 2
+          curl -s "${BASE}&category=health&q=cure+recovery+success+treatment"        -o /tmp/cat2.json
+          sleep 2
+          curl -s "${BASE}&category=environment&q=conservation+renewable+restored"   -o /tmp/cat3.json
+          sleep 2
+          curl -s "${BASE}&category=technology&q=innovation+achievement+milestone"   -o /tmp/cat4.json
+          sleep 2
+          curl -s "${BASE}&category=world&q=humanitarian+volunteers+charity"         -o /tmp/cat5.json
+
+      - name: Combine, filter (3-month cutoff), deduplicate → top 50
         run: |
-          mkdir -p public
-          mv articles.json public/articles.json
+          python3 << 'PYEOF'
+          import json, sys
+          from datetime import datetime, timedelta
 
-      - name: Commit and push changes
+          cutoff = datetime.utcnow() - timedelta(days=90)
+          seen_ids = set()
+          articles = []
+
+          for i in range(1, 6):
+              try:
+                  with open(f'/tmp/cat{i}.json') as f:
+                      data = json.load(f)
+                  if data.get('status') != 'success':
+                      continue
+                  for a in data.get('results', []):
+                      aid = a.get('article_id', '')
+                      if not aid or not a.get('title') or not a.get('link'):
+                          continue
+                      if aid in seen_ids:
+                          continue
+                      pub = a.get('pubDate', '')
+                      if pub:
+                          try:
+                              pub_dt = datetime.strptime(pub[:10], '%Y-%m-%d')
+                              if pub_dt < cutoff:
+                                  continue
+                          except Exception:
+                              pass
+                      seen_ids.add(aid)
+                      articles.append(a)
+              except Exception as e:
+                  print(f'Error reading cat{i}.json: {e}', file=sys.stderr)
+
+          output = {
+              'status': 'success',
+              'totalResults': len(articles),
+              'results': articles[:50],
+          }
+          with open('public/articles.json', 'w') as f:
+              json.dump(output, f)
+          print(f'Saved {len(articles[:50])} articles (from {len(articles)} candidates) to public/articles.json')
+          PYEOF
+
+      - name: Commit and push
         run: |
           git config --local user.email 'github-actions@github.com'
           git config --local user.name 'GitHub Actions'
           git add public/articles.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m 'chore: update articles from News Data API' && git push origin main)
+          git diff --quiet && git diff --staged --quiet || \
+            (git commit -m 'chore: daily article refresh [skip ci]' && git push origin main)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
