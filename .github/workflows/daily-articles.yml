@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch articles from News Data API
         run: |
@@ -30,3 +32,5 @@ jobs:
           git add public/articles.json
           git commit -m 'chore: update articles from News Data API'
           git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
