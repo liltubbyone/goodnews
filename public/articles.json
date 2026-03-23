@@ -1,0 +1,1 @@
+{"status":"error","results":{"message":"You can't use the limit parameter in the /1/news endpoint.","code":"UnsupportedParameter"}}
