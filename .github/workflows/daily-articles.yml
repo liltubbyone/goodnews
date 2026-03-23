@@ -1,0 +1,32 @@
+name: Daily Articles Fetch
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Runs daily at 2 AM UTC
+  workflow_dispatch:     # Allows manual trigger
+
+jobs:
+  fetch_articles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Fetch articles from News Data API
+        run: |
+          curl -X GET 'https://newsdata.io/api/1/news?apikey=pub_eae24b22627b43a28d515ea2dc1f33e1&limit=50&country=us' \
+          -H 'Accept: application/json' \
+          -o articles.json
+
+      - name: Create public directory and move file
+        run: |
+          mkdir -p public
+          mv articles.json public/articles.json
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email 'github-actions@github.com'
+          git config --local user.name 'GitHub Actions'
+          git add public/articles.json
+          git commit -m 'chore: update articles from News Data API'
+          git push origin main
