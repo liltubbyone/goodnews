@@ -56,7 +56,7 @@ jobs:
                   print(f'  Unsplash error for "{query}": {e}', file=sys.stderr)
               return None
 
-          cutoff = datetime.utcnow() - timedelta(days=90)
+          cutoff = datetime.utcnow() - timedelta(days=180)
           seen_ids = set()
           articles = []
 
