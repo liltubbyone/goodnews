@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Bookmark, BookmarkCheck, Clock, ExternalLink, TrendingUp } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { Article, CATEGORY_COLORS, REGION_COLORS } from '@/types'
+import { buildArticleFallbackUrl } from '@/lib/imageFallback'
 
 interface ArticleCardProps {
   article: Article
@@ -17,8 +18,8 @@ interface ArticleCardProps {
 export function ArticleCard({ article, savedIds = [], onToggleSave, size = 'default' }: ArticleCardProps) {
   const isSaved = savedIds.includes(article.id)
   const [saving, setSaving] = useState(false)
-  const [imgSrc, setImgSrc] = useState(article.imageUrl)
-  const fallbackImg = `https://picsum.photos/seed/${article.id}/800/450`
+  const fallbackImg = buildArticleFallbackUrl(article.category, article.tags, article.title)
+  const [imgSrc, setImgSrc] = useState(article.imageUrl || fallbackImg)
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault()

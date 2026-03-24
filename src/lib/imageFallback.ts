@@ -1,0 +1,116 @@
+// Keyword → Unsplash photo ID pairs, sorted longest-key-first at module load
+// so specific terms ("bald eagle") always win over generic ones ("wildlife").
+const KEYWORD_PHOTOS: [string, string][] = [
+  // Animals — specific first
+  ['bald eagle',              'photo-1544979590-b08278e7a6d8'],
+  ['eagle',                   'photo-1544979590-b08278e7a6d8'],
+  ['raptor',                  'photo-1444464666168-49d633b86797'],
+  ['hawk',                    'photo-1444464666168-49d633b86797'],
+  ['bird',                    'photo-1444464666168-49d633b86797'],
+  ['tiger',                   'photo-1561731216-c3a4d99437d5'],
+  ['elephant',                'photo-1474511320723-9a56873867b5'],
+  ['whale',                   'photo-1559827260-dc66d52bef19'],
+  ['dolphin',                 'photo-1607153333879-c174d265f1d2'],
+  ['shark',                   'photo-1560807707-8cc77767d783'],
+  ['bear',                    'photo-1589656966895-2f33e7653819'],
+  ['wolf',                    'photo-1564349683136-77e08dba1ef7'],
+  ['gorilla',                 'photo-1516534775068-ba3e7458af70'],
+  ['cheetah',                 'photo-1456926631375-92c8ce872def'],
+  ['wildlife',                'photo-1474511320723-9a56873867b5'],
+  // Environment
+  ['rainforest',              'photo-1448375240586-992e47ae5ad5'],
+  ['coral reef',              'photo-1518020382113-a7e8fc38eac9'],
+  ['coral',                   'photo-1518020382113-a7e8fc38eac9'],
+  ['reef',                    'photo-1518020382113-a7e8fc38eac9'],
+  ['ocean',                   'photo-1505118380757-91f5f5632de0'],
+  ['sea',                     'photo-1505118380757-91f5f5632de0'],
+  ['river',                   'photo-1470770841072-f978cf4d019e'],
+  ['lake',                    'photo-1439853949212-36089e972ba2'],
+  ['mountain',                'photo-1464822759023-fed622ff2c3b'],
+  ['glacier',                 'photo-1501854140801-50d01698950b'],
+  ['wetland',                 'photo-1551871812-10ecc21ffa2f'],
+  ['forest',                  'photo-1441974231531-c6227db76b6e'],
+  ['tree',                    'photo-1448375240586-992e47ae5ad5'],
+  ['solar energy',            'photo-1509391366360-2e959784a276'],
+  ['solar',                   'photo-1509391366360-2e959784a276'],
+  ['wind energy',             'photo-1466611653911-0265b48800aa'],
+  ['wind turbine',            'photo-1466611653911-0265b48800aa'],
+  ['wind',                    'photo-1466611653911-0265b48800aa'],
+  ['renewable',               'photo-1509391366360-2e959784a276'],
+  ['climate',                 'photo-1504711434969-e33886168f5c'],
+  ['biodiversity',            'photo-1441974231531-c6227db76b6e'],
+  ['conservation',            'photo-1441974231531-c6227db76b6e'],
+  ['environment',             'photo-1441974231531-c6227db76b6e'],
+  ['endangered',              'photo-1561731216-c3a4d99437d5'],
+  ['pollution',               'photo-1569880153113-76161059f975'],
+  // Science & Tech
+  ['gene therapy',            'photo-1576091160550-2173dba999ef'],
+  ['gene',                    'photo-1576091160550-2173dba999ef'],
+  ['dna',                     'photo-1576091160550-2173dba999ef'],
+  ['artificial intelligence', 'photo-1620712943543-bcc4688e7485'],
+  ['machine learning',        'photo-1620712943543-bcc4688e7485'],
+  ['ai',                      'photo-1620712943543-bcc4688e7485'],
+  ['robot',                   'photo-1485827404703-89b55fcc595e'],
+  ['space',                   'photo-1446776811953-b23d57bd21aa'],
+  ['nasa',                    'photo-1446776811953-b23d57bd21aa'],
+  ['astronomy',               'photo-1446776811953-b23d57bd21aa'],
+  ['research',                'photo-1507413245164-6160d8298b31'],
+  ['laboratory',              'photo-1507413245164-6160d8298b31'],
+  ['innovation',              'photo-1451187580459-43490279c0fa'],
+  ['technology',              'photo-1518770660439-4636190af475'],
+  ['science',                 'photo-1507413245164-6160d8298b31'],
+  // Health
+  ['mental health',           'photo-1493836512294-502baa1986e2'],
+  ['vaccine',                 'photo-1584308666744-24d5c474f2ae'],
+  ['cancer',                  'photo-1576091160550-2173dba999ef'],
+  ['hospital',                'photo-1516549655169-df83a0774514'],
+  ['medical',                 'photo-1505751172876-fa1923c5c528'],
+  ['medicine',                'photo-1584308666744-24d5c474f2ae'],
+  ['health',                  'photo-1505751172876-fa1923c5c528'],
+  ['nutrition',               'photo-1490645935967-10de6ba17061'],
+  ['fitness',                 'photo-1517836357463-d25dfeac3438'],
+  // Community / Humanitarian
+  ['indigenous',              'photo-1529156069898-49953e39b3ac'],
+  ['volunteer',               'photo-1469571486292-0ba58a3f068b'],
+  ['humanitarian',            'photo-1469571486292-0ba58a3f068b'],
+  ['charity',                 'photo-1469571486292-0ba58a3f068b'],
+  ['children',                'photo-1488521787991-ed7bbaae773c'],
+  ['community',               'photo-1529156069898-49953e39b3ac'],
+  // Education
+  ['university',              'photo-1523050854058-8df90110c9f1'],
+  ['school',                  'photo-1503676260728-1c00da094a0b'],
+  ['education',               'photo-1503676260728-1c00da094a0b'],
+  // Arts & Culture
+  ['music',                   'photo-1511671782779-c97d3d27a1d4'],
+  ['museum',                  'photo-1554907984-15263bfd63bd'],
+  ['art',                     'photo-1460661419201-fd4cecdf8a8b'],
+  ['culture',                 'photo-1460661419201-fd4cecdf8a8b'],
+  // Sports
+  ['olympics',                'photo-1461896836934-ffe607ba8211'],
+  ['athletics',               'photo-1461896836934-ffe607ba8211'],
+  ['sport',                   'photo-1461896836934-ffe607ba8211'],
+]
+
+const SORTED_KEYWORDS = [...KEYWORD_PHOTOS].sort((a, b) => b[0].length - a[0].length)
+
+const CATEGORY_PHOTOS: Record<string, string> = {
+  'Environment':    'photo-1441974231531-c6227db76b6e',
+  'Science & Tech': 'photo-1518770660439-4636190af475',
+  'Health':         'photo-1505751172876-fa1923c5c528',
+  'Community':      'photo-1529156069898-49953e39b3ac',
+  'Humanitarian':   'photo-1469571486292-0ba58a3f068b',
+  'Education':      'photo-1503676260728-1c00da094a0b',
+  'Sports':         'photo-1461896836934-ffe607ba8211',
+  'Arts & Culture': 'photo-1460661419201-fd4cecdf8a8b',
+}
+
+export function buildArticleFallbackUrl(category: string, tags: string[], title: string): string {
+  const corpus = [...tags, title].join(' ').toLowerCase()
+  for (const [kw, photoId] of SORTED_KEYWORDS) {
+    if (corpus.includes(kw)) {
+      return `https://images.unsplash.com/${photoId}?w=800&h=450&fit=crop&auto=format`
+    }
+  }
+  const photoId = CATEGORY_PHOTOS[category] ?? 'photo-1441974231531-c6227db76b6e'
+  return `https://images.unsplash.com/${photoId}?w=800&h=450&fit=crop&auto=format`
+}

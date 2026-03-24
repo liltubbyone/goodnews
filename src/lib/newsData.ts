@@ -50,7 +50,7 @@ const defaultArticles: Article[] = [
     category: 'Environment',
     tags: ['bald eagle', 'wildlife', 'conservation', 'endangered species'],
     publishedAt: '2025-10-19T09:00:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1516739549659-62e4b0d57f34?w=800&h=450&fit=crop&auto=format',
+    imageUrl: 'https://images.unsplash.com/photo-1544979590-b08278e7a6d8?w=800&h=450&fit=crop&auto=format',
     positivityScore: 95,
     trending: false,
     featured: true,
