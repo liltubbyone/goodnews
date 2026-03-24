@@ -916,38 +916,24 @@ const defaultArticles: Article[] = [
   },
 ]
 
-let fetchedArticles: Article[] = []
-
-// Load articles from the API JSON file
-async function loadFetchedArticles() {
-  try {
-    const response = await fetch('/articles.json')
-    if (response.ok) {
-      const data = await response.json()
-      if (data.results && Array.isArray(data.results)) {
-        // Transform API articles to match Article type
-        fetchedArticles = data.results.slice(0, 50).map((apiArticle: any, index: number) => ({
-          id: `live-${apiArticle.article_id || index}`,
-          title: apiArticle.title,
-          summary: apiArticle.description || '',
-          content: apiArticle.content || 'Full article available at source',
-          sourceUrl: apiArticle.link,
-          sourceName: apiArticle.source_name || 'News',
-          region: apiArticle.country?.[0] === 'united states of america' ? 'North America' : 'Global',
-          country: apiArticle.country?.[0] || 'Global',
-          category: apiArticle.category?.[0] || 'News',
-          tags: apiArticle.keywords || [],
-          publishedAt: apiArticle.pubDate || new Date().toISOString(),
-          imageUrl: apiArticle.image_url || `https://picsum.photos/seed/${apiArticle.article_id}/800/450`,
-          positivityScore: 75,
-          trending: false,
-          featured: false,
-          readTime: 3,
-        }))
-      }
-    }
-  } catch (error) {
-    console.error('Failed to load fetched articles:', error)
+function mapApiArticle(apiArticle: any, index: number): Article {
+  return {
+    id: `live-${apiArticle.article_id || index}`,
+    title: apiArticle.title,
+    summary: apiArticle.description || '',
+    content: apiArticle.content || 'Full article available at source',
+    sourceUrl: apiArticle.link,
+    sourceName: apiArticle.source_name || 'News',
+    region: apiArticle.country?.[0] === 'united states of america' ? 'North America' : 'Global',
+    country: apiArticle.country?.[0] || 'Global',
+    category: apiArticle.category?.[0] || 'News',
+    tags: apiArticle.keywords || [],
+    publishedAt: apiArticle.pubDate || new Date().toISOString(),
+    imageUrl: apiArticle.image_url || `https://picsum.photos/seed/${apiArticle.article_id}/800/450`,
+    positivityScore: 75,
+    trending: false,
+    featured: false,
+    readTime: 3,
   }
 }
 

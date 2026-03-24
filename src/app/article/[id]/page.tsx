@@ -4,6 +4,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { Clock, ExternalLink, ArrowLeft, Globe, Tag, CheckCircle2, Lightbulb, BookOpen } from 'lucide-react'
+import fs from 'fs'
+import path from 'path'
 import { getArticleById, getRelatedArticles } from '@/lib/newsData'
 import { prisma } from '@/lib/db'
 import { ArticleCard } from '@/components/ArticleCard'
@@ -18,28 +20,60 @@ async function resolveArticle(id: string): Promise<Article | undefined> {
   // Try DB lookup for live- prefixed IDs first
   if (id.startsWith('live-')) {
     const dbId = id.replace(/^live-/, '')
-    const row = await prisma.fetchedArticle.findUnique({ where: { id: dbId } })
-    if (row) {
-      return {
-        id,
-        title: row.title,
-        summary: row.summary,
-        content: row.content,
-        sourceUrl: row.sourceUrl,
-        sourceName: row.sourceName,
-        region: row.region,
-        country: row.country,
-        category: row.category,
-        tags: JSON.parse(row.tags || '[]'),
-        publishedAt: row.publishedAt.toISOString(),
-        imageUrl: row.imageUrl || `https://picsum.photos/seed/${row.id}/800/450`,
-        positivityScore: row.positivityScore,
-        trending: row.trending,
-        featured: row.featured,
-        readTime: row.readTime,
+
+    // Try DB first
+    try {
+      const row = await prisma.fetchedArticle.findUnique({ where: { id: dbId } })
+      if (row) {
+        return {
+          id,
+          title: row.title,
+          summary: row.summary,
+          content: row.content,
+          sourceUrl: row.sourceUrl,
+          sourceName: row.sourceName,
+          region: row.region,
+          country: row.country,
+          category: row.category,
+          tags: JSON.parse(row.tags || '[]'),
+          publishedAt: row.publishedAt.toISOString(),
+          imageUrl: row.imageUrl || `https://picsum.photos/seed/${row.id}/800/450`,
+          positivityScore: row.positivityScore,
+          trending: row.trending,
+          featured: row.featured,
+          readTime: row.readTime,
+        }
       }
-    }
-    // DB lookup missed (article came from JSON file, not DB) — fall through to in-memory lookup
+    } catch {}
+
+    // Fallback: look up from public/articles.json
+    try {
+      const filePath = path.join(process.cwd(), 'public', 'articles.json')
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+      const apiArticle = data.results?.find((a: any) => a.article_id === dbId)
+      if (apiArticle) {
+        return {
+          id,
+          title: apiArticle.title,
+          summary: apiArticle.description || '',
+          content: apiArticle.content || 'Full article available at source',
+          sourceUrl: apiArticle.link,
+          sourceName: apiArticle.source_name || 'News',
+          region: apiArticle.country?.[0] === 'united states of america' ? 'North America' : 'Global',
+          country: apiArticle.country?.[0] || 'Global',
+          category: apiArticle.category?.[0] || 'News',
+          tags: apiArticle.keywords || [],
+          publishedAt: apiArticle.pubDate || new Date().toISOString(),
+          imageUrl: apiArticle.image_url || `https://picsum.photos/seed/${apiArticle.article_id}/800/450`,
+          positivityScore: 75,
+          trending: false,
+          featured: false,
+          readTime: 3,
+        }
+      }
+    } catch {}
+
+    // DB lookup missed — fall through to in-memory lookup
   }
   // Covers static defaultArticles AND JSON-loaded fetchedArticles
   return getArticleById(id)
