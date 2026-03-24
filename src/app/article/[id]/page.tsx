@@ -6,6 +6,7 @@ import { Clock, ExternalLink, ArrowLeft, Globe, Tag, CheckCircle2, Lightbulb, Bo
 import fs from 'fs'
 import path from 'path'
 import { getArticleById, getRelatedArticles } from '@/lib/newsData'
+import { fetchUnsplashPhoto } from '@/lib/photoSearch'
 import { prisma } from '@/lib/db'
 import { ArticleCard } from '@/components/ArticleCard'
 import { ArticleHeroImage } from '@/components/ArticleHeroImage'
@@ -153,6 +154,13 @@ export default async function ArticlePage({ params }: Props) {
   const { id } = await params
   const article = await resolveArticle(id)
   if (!article) notFound()
+
+  // If the article has no image, fetch one from Unsplash server-side
+  if (!article.imageUrl) {
+    const query = article.tags.slice(0, 2).join(' ') || article.title.split(' ').slice(0, 4).join(' ')
+    const photo = await fetchUnsplashPhoto(query)
+    if (photo) article.imageUrl = photo
+  }
 
   const related = getRelatedArticles(article)
   const formattedDate = format(new Date(article.publishedAt), 'MMMM d, yyyy')

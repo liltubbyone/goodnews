@@ -29,11 +29,32 @@ jobs:
           sleep 2
           curl -s "${BASE}&category=world&q=humanitarian+volunteers+charity"         -o /tmp/cat5.json
 
-      - name: Combine, filter (3-month cutoff), deduplicate → top 50
+      - name: Combine, filter, deduplicate, fetch photos → top 50
+        env:
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
         run: |
           python3 << 'PYEOF'
-          import json, sys
+          import json, sys, os, urllib.request, urllib.parse, time
           from datetime import datetime, timedelta
+
+          UNSPLASH_KEY = os.environ.get('UNSPLASH_ACCESS_KEY', '')
+
+          def fetch_photo(query):
+              """Return an Unsplash image URL for the given query, or None."""
+              if not UNSPLASH_KEY:
+                  return None
+              try:
+                  q = urllib.parse.quote(query)
+                  url = f"https://api.unsplash.com/search/photos?query={q}&per_page=1&orientation=landscape&client_id={UNSPLASH_KEY}"
+                  with urllib.request.urlopen(url, timeout=8) as r:
+                      data = json.loads(r.read())
+                  results = data.get('results', [])
+                  if results:
+                      raw = results[0]['urls']['raw']
+                      return f"{raw}&w=800&h=450&fit=crop&auto=format"
+              except Exception as e:
+                  print(f'  Unsplash error for "{query}": {e}', file=sys.stderr)
+              return None
 
           cutoff = datetime.utcnow() - timedelta(days=90)
           seen_ids = set()
@@ -64,14 +85,28 @@ jobs:
               except Exception as e:
                   print(f'Error reading cat{i}.json: {e}', file=sys.stderr)
 
+          top = articles[:50]
+
+          # Fetch a real photo for any article that doesn't already have one
+          for a in top:
+              if not a.get('image_url'):
+                  keywords = a.get('keywords') or []
+                  title = a.get('title', '')
+                  query = ' '.join(keywords[:2]) if keywords else ' '.join(title.split()[:5])
+                  photo = fetch_photo(query)
+                  if photo:
+                      a['image_url'] = photo
+                      print(f'  Photo fetched for: {title[:60]}')
+                  time.sleep(0.4)  # stay well under 50 req/hour rate limit
+
           output = {
               'status': 'success',
-              'totalResults': len(articles),
-              'results': articles[:50],
+              'totalResults': len(top),
+              'results': top,
           }
           with open('public/articles.json', 'w') as f:
               json.dump(output, f)
-          print(f'Saved {len(articles[:50])} articles (from {len(articles)} candidates) to public/articles.json')
+          print(f'Saved {len(top)} articles to public/articles.json')
           PYEOF
 
       - name: Commit and push
