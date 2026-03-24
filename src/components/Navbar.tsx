@@ -13,7 +13,6 @@ export function Navbar() {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/highlights', label: 'Global Highlights' },
-    { href: '/regional', label: 'Regional' },
     { href: '/trending', label: 'Trending' },
     { href: '/search', label: 'Search' },
   ]
