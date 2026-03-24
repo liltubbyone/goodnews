@@ -1,9 +1,10 @@
 import { prisma } from './db'
 import { scorePositivity, categorizeArticle, detectRegion } from './positiveFilter'
 
-// NewsData.io — free plan: 200 credits/day, 10 articles/request
-const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY
-const NEWSDATA_BASE = 'https://newsdata.io/api/1/news'
+// ── API keys ────────────────────────────────────────────────────────────────
+const NEWSDATA_API_KEY   = process.env.NEWSDATA_API_KEY    // newsdata.io
+const GUARDIAN_API_KEY   = process.env.GUARDIAN_API_KEY    // open-platform.theguardian.com
+const GNEWS_API_KEY      = process.env.GNEWS_API_KEY       // gnews.io
 
 // Articles older than 3 months are excluded everywhere
 function threeMonthsAgo(): Date {
@@ -12,9 +13,65 @@ function threeMonthsAgo(): Date {
   return d
 }
 
-// Category + keyword pairs that surface positive news via NewsData.io
-// NewsData.io free: 200 credits/day — each request = 1 credit, returns up to 10 articles
-const FETCH_CONFIGS = [
+function estimateReadTime(text: string): number {
+  return Math.max(2, Math.ceil((text?.split(' ').length ?? 150) / 200))
+}
+
+function buildImageUrl(apiUrl: string | null | undefined, seed: string): string {
+  if (apiUrl && apiUrl.startsWith('http')) return apiUrl
+  return `https://picsum.photos/seed/${seed}/800/450`
+}
+
+// Shared upsert — all three fetchers funnel articles through here
+async function upsertArticle(a: {
+  externalId: string
+  title: string
+  summary: string
+  content: string
+  sourceUrl: string
+  sourceName: string
+  imageUrl: string | null | undefined
+  pubDate: Date
+  score: number
+  seed: string
+}): Promise<boolean> {
+  try {
+    const category = categorizeArticle(a.title, a.summary)
+    const loc      = detectRegion(a.title, a.summary, a.sourceName)
+    const imageUrl = buildImageUrl(a.imageUrl, a.seed)
+    await prisma.fetchedArticle.upsert({
+      where:  { externalId: a.externalId },
+      update: { positivityScore: a.score, trending: a.score >= 85 },
+      create: {
+        externalId:     a.externalId,
+        title:          a.title,
+        summary:        a.summary,
+        content:        a.content,
+        sourceUrl:      a.sourceUrl,
+        sourceName:     a.sourceName,
+        region:         loc.region,
+        country:        loc.country,
+        category,
+        tags:           JSON.stringify([category.toLowerCase(), loc.region.toLowerCase()]),
+        publishedAt:    a.pubDate,
+        imageUrl,
+        positivityScore: a.score,
+        trending:       a.score >= 85,
+        featured:       a.score >= 92,
+        readTime:       estimateReadTime(a.content),
+      },
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+// ── NewsData.io ──────────────────────────────────────────────────────────────
+// Free plan: 200 credits/day, 10 articles/request
+const NEWSDATA_BASE = 'https://newsdata.io/api/1/news'
+
+const NEWSDATA_CONFIGS = [
   { category: 'science',       q: 'breakthrough discovery' },
   { category: 'science',       q: 'invention innovation research' },
   { category: 'health',        q: 'cure treatment success recovery' },
@@ -29,40 +86,14 @@ const FETCH_CONFIGS = [
   { category: 'sports',        q: 'champion record achievement inspires' },
 ]
 
-interface NewsdataArticle {
-  article_id: string
-  title: string
-  description: string | null
-  content: string | null
-  link: string
-  image_url: string | null
-  pubDate: string
-  source_name: string
-  source_url: string | null
-  country: string[] | null
-  category: string[] | null
-}
+async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }> {
+  if (!NEWSDATA_API_KEY) return { fetched: 0, stored: 0 }
 
-function estimateReadTime(text: string): number {
-  return Math.max(2, Math.ceil((text?.split(' ').length ?? 150) / 200))
-}
-
-function buildImageUrl(apiUrl: string | null, seed: string): string {
-  if (apiUrl && apiUrl.startsWith('http')) return apiUrl
-  return `https://picsum.photos/seed/${seed}/800/450`
-}
-
-export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; stored: number }> {
-  if (!NEWSDATA_API_KEY) {
-    console.warn('[GoodNews] NEWSDATA_API_KEY not set — add it to .env.local to enable live news.')
-    return { fetched: 0, stored: 0 }
-  }
-
-  const cutoff = threeMonthsAgo()
-  const candidates: (NewsdataArticle & { score: number })[] = []
+  const cutoff  = threeMonthsAgo()
   const seenIds = new Set<string>()
+  const candidates: Array<{ title: string; summary: string; content: string; link: string; source_name: string; image_url: string | null; pubDate: string; article_id: string; score: number }> = []
 
-  for (const config of FETCH_CONFIGS) {
+  for (const config of NEWSDATA_CONFIGS) {
     try {
       const url = new URL(NEWSDATA_BASE)
       url.searchParams.set('apikey', NEWSDATA_API_KEY)
@@ -71,83 +102,224 @@ export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; st
       url.searchParams.set('q', config.q)
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
-      if (!res.ok) {
-        console.error(`[GoodNews] NewsData.io error: ${res.status} for category=${config.category}`)
-        continue
-      }
-
+      if (!res.ok) continue
       const data = await res.json()
       if (data.status !== 'success' || !Array.isArray(data.results)) continue
 
-      for (const article of data.results as NewsdataArticle[]) {
-        if (!article.title || !article.link || seenIds.has(article.article_id)) continue
-
-        // Skip articles older than 3 months
-        if (article.pubDate) {
-          const pubDate = new Date(article.pubDate)
-          if (!isNaN(pubDate.getTime()) && pubDate < cutoff) continue
-        }
-
-        seenIds.add(article.article_id)
-
-        const summary = article.description ?? article.title
-        const score = scorePositivity(article.title, summary)
-        if (score >= 50) {
-          candidates.push({ ...article, score })
-        }
+      for (const a of data.results) {
+        if (!a.title || !a.link || seenIds.has(a.article_id)) continue
+        if (a.pubDate && new Date(a.pubDate) < cutoff) continue
+        seenIds.add(a.article_id)
+        const summary = a.description ?? a.title
+        const score   = scorePositivity(a.title, summary)
+        if (score >= 50) candidates.push({ ...a, summary, score })
       }
     } catch (err) {
-      console.error(`[GoodNews] Fetch failed for category=${config.category}:`, err)
+      console.error(`[GoodNews/NewsData] category=${config.category}:`, err)
     }
   }
 
-  // Sort by positivity score, take top 50
-  const top50 = candidates
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 50)
-
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 50)
   let stored = 0
-  for (const article of top50) {
+  for (const a of top) {
+    const ok = await upsertArticle({
+      externalId: a.link,
+      title:      a.title,
+      summary:    a.summary,
+      content:    a.content ?? a.summary,
+      sourceUrl:  a.link,
+      sourceName: a.source_name ?? 'News Source',
+      imageUrl:   a.image_url,
+      pubDate:    a.pubDate ? new Date(a.pubDate) : new Date(),
+      score:      a.score,
+      seed:       a.article_id.slice(-8),
+    })
+    if (ok) stored++
+  }
+
+  console.log(`[GoodNews/NewsData] ${candidates.length} candidates → ${stored} stored`)
+  return { fetched: candidates.length, stored }
+}
+
+// ── The Guardian ─────────────────────────────────────────────────────────────
+// Free open-platform: 500 req/day, up to 50 results/request
+const GUARDIAN_BASE = 'https://content.guardianapis.com/search'
+
+const GUARDIAN_QUERIES = [
+  { q: 'conservation wildlife recovery',     section: 'environment' },
+  { q: 'renewable energy breakthrough',      section: 'environment' },
+  { q: 'medical breakthrough treatment',     section: 'science' },
+  { q: 'community volunteers charity',       section: 'society' },
+  { q: 'innovation technology achievement',  section: 'technology' },
+  { q: 'record milestone achievement',       section: 'world' },
+  { q: 'mental health wellbeing support',    section: 'society' },
+  { q: 'education school success',           section: 'education' },
+]
+
+async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }> {
+  if (!GUARDIAN_API_KEY) return { fetched: 0, stored: 0 }
+
+  const cutoff    = threeMonthsAgo()
+  const seenUrls  = new Set<string>()
+  const candidates: Array<{ webTitle: string; webUrl: string; webPublicationDate: string; fields?: { trailText?: string; bodyText?: string; thumbnail?: string; publication?: string }; score: number }> = []
+
+  for (const config of GUARDIAN_QUERIES) {
     try {
-      const summary = article.description ?? article.title
-      const content = article.content ?? summary
-      const category = categorizeArticle(article.title, summary)
-      const loc = detectRegion(article.title, summary, article.source_name ?? '')
-      const seed = article.article_id.slice(-8)
-      const imageUrl = buildImageUrl(article.image_url, seed)
+      const url = new URL(GUARDIAN_BASE)
+      url.searchParams.set('api-key',    GUARDIAN_API_KEY)
+      url.searchParams.set('q',          config.q)
+      url.searchParams.set('section',    config.section)
+      url.searchParams.set('lang',       'en')
+      url.searchParams.set('page-size',  '20')
+      url.searchParams.set('show-fields','trailText,bodyText,thumbnail,publication')
+      url.searchParams.set('from-date',  cutoff.toISOString().split('T')[0])
 
-      const pubDate = article.pubDate ? new Date(article.pubDate) : new Date()
+      const res = await fetch(url.toString(), { cache: 'no-store' })
+      if (!res.ok) continue
+      const data = await res.json()
+      if (data.response?.status !== 'ok') continue
 
-      await prisma.fetchedArticle.upsert({
-        where: { externalId: article.link },
-        update: { positivityScore: article.score, trending: article.score >= 85 },
-        create: {
-          externalId: article.link,
-          title: article.title,
-          summary,
-          content,
-          sourceUrl: article.link,
-          sourceName: article.source_name ?? 'News Source',
-          region: loc.region,
-          country: loc.country,
-          category,
-          tags: JSON.stringify([category.toLowerCase(), loc.region.toLowerCase()]),
-          publishedAt: pubDate,
-          imageUrl,
-          positivityScore: article.score,
-          trending: article.score >= 85,
-          featured: article.score >= 92,
-          readTime: estimateReadTime(content),
-        },
-      })
-      stored++
-    } catch {
-      // silently skip duplicates
+      for (const a of data.response.results ?? []) {
+        if (!a.webTitle || !a.webUrl || seenUrls.has(a.webUrl)) continue
+        seenUrls.add(a.webUrl)
+        const summary = a.fields?.trailText ?? a.webTitle
+        const score   = scorePositivity(a.webTitle, summary)
+        if (score >= 50) candidates.push({ ...a, score })
+      }
+    } catch (err) {
+      console.error(`[GoodNews/Guardian] q=${config.q}:`, err)
     }
   }
 
-  console.log(`[GoodNews] Scored ${candidates.length} positive articles → stored ${stored}`)
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 50)
+  let stored = 0
+  for (const a of top) {
+    const seed = Buffer.from(a.webUrl).toString('base64').slice(-8)
+    const ok = await upsertArticle({
+      externalId: a.webUrl,
+      title:      a.webTitle,
+      summary:    a.fields?.trailText ?? a.webTitle,
+      content:    a.fields?.bodyText  ?? a.fields?.trailText ?? a.webTitle,
+      sourceUrl:  a.webUrl,
+      sourceName: a.fields?.publication ?? 'The Guardian',
+      imageUrl:   a.fields?.thumbnail,
+      pubDate:    new Date(a.webPublicationDate),
+      score:      a.score,
+      seed,
+    })
+    if (ok) stored++
+  }
+
+  console.log(`[GoodNews/Guardian] ${candidates.length} candidates → ${stored} stored`)
   return { fetched: candidates.length, stored }
+}
+
+// ── GNews ────────────────────────────────────────────────────────────────────
+// Free plan: 100 req/day, 10 articles/request
+const GNEWS_BASE = 'https://gnews.io/api/v4/search'
+
+const GNEWS_QUERIES = [
+  { q: 'conservation wildlife success',     topic: 'science' },
+  { q: 'renewable energy record',           topic: 'science' },
+  { q: 'medical cure breakthrough',         topic: 'health' },
+  { q: 'community achievement volunteers',  topic: 'nation' },
+  { q: 'technology innovation milestone',   topic: 'technology' },
+]
+
+async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
+  if (!GNEWS_API_KEY) return { fetched: 0, stored: 0 }
+
+  const cutoff   = threeMonthsAgo()
+  const seenUrls = new Set<string>()
+  const candidates: Array<{ title: string; description: string; content: string; url: string; image: string | null; publishedAt: string; source: { name: string }; score: number }> = []
+
+  for (const config of GNEWS_QUERIES) {
+    try {
+      const url = new URL(GNEWS_BASE)
+      url.searchParams.set('apikey',   GNEWS_API_KEY)
+      url.searchParams.set('q',        config.q)
+      url.searchParams.set('topic',    config.topic)
+      url.searchParams.set('lang',     'en')
+      url.searchParams.set('max',      '10')
+      url.searchParams.set('from',     cutoff.toISOString())
+
+      const res = await fetch(url.toString(), { cache: 'no-store' })
+      if (!res.ok) continue
+      const data = await res.json()
+      if (!Array.isArray(data.articles)) continue
+
+      for (const a of data.articles) {
+        if (!a.title || !a.url || seenUrls.has(a.url)) continue
+        seenUrls.add(a.url)
+        const summary = a.description ?? a.title
+        const score   = scorePositivity(a.title, summary)
+        if (score >= 50) candidates.push({ ...a, score })
+      }
+    } catch (err) {
+      console.error(`[GoodNews/GNews] q=${config.q}:`, err)
+    }
+  }
+
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 30)
+  let stored = 0
+  for (const a of top) {
+    const seed = Buffer.from(a.url).toString('base64').slice(-8)
+    const ok = await upsertArticle({
+      externalId: a.url,
+      title:      a.title,
+      summary:    a.description ?? a.title,
+      content:    a.content     ?? a.description ?? a.title,
+      sourceUrl:  a.url,
+      sourceName: a.source?.name ?? 'GNews',
+      imageUrl:   a.image,
+      pubDate:    new Date(a.publishedAt),
+      score:      a.score,
+      seed,
+    })
+    if (ok) stored++
+  }
+
+  console.log(`[GoodNews/GNews] ${candidates.length} candidates → ${stored} stored`)
+  return { fetched: candidates.length, stored }
+}
+
+// ── Public exports ───────────────────────────────────────────────────────────
+
+// Legacy single-source export (kept for backward compat)
+export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; stored: number }> {
+  return fetchFromNewsdata()
+}
+
+// Run all three APIs in parallel and combine results
+export async function fetchAllSources(): Promise<{
+  newsdata: { fetched: number; stored: number }
+  guardian: { fetched: number; stored: number }
+  gnews:    { fetched: number; stored: number }
+  total:    { fetched: number; stored: number }
+}> {
+  const [newsdata, guardian, gnews] = await Promise.allSettled([
+    fetchFromNewsdata(),
+    fetchFromGuardian(),
+    fetchFromGnews(),
+  ])
+
+  const nd = newsdata.status === 'fulfilled' ? newsdata.value : { fetched: 0, stored: 0 }
+  const gu = guardian.status === 'fulfilled' ? guardian.value : { fetched: 0, stored: 0 }
+  const gn = gnews.status    === 'fulfilled' ? gnews.value    : { fetched: 0, stored: 0 }
+
+  if (newsdata.status === 'rejected') console.error('[GoodNews] NewsData source failed:', newsdata.reason)
+  if (guardian.status === 'rejected') console.error('[GoodNews] Guardian source failed:', guardian.reason)
+  if (gnews.status    === 'rejected') console.error('[GoodNews] GNews source failed:',    gnews.reason)
+
+  return {
+    newsdata: nd,
+    guardian: gu,
+    gnews:    gn,
+    total: {
+      fetched: nd.fetched + gu.fetched + gn.fetched,
+      stored:  nd.stored  + gu.stored  + gn.stored,
+    },
+  }
 }
 
 // Remove articles older than 3 months from the database
@@ -165,7 +337,7 @@ export async function cleanupOldArticles(): Promise<number> {
 export async function getLastFetchTime(): Promise<Date | null> {
   const latest = await prisma.fetchedArticle.findFirst({
     orderBy: { fetchedAt: 'desc' },
-    select: { fetchedAt: true },
+    select:  { fetchedAt: true },
   })
   return latest?.fetchedAt ?? null
 }
