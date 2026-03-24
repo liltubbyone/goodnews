@@ -1005,7 +1005,7 @@ export function searchArticles(query: string, region?: string, category?: string
     )
   }
 
-  return results
+  return results.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 }
 
 export function getRelatedArticles(article: Article, limit = 3): Article[] {
