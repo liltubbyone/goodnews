@@ -937,29 +937,6 @@ function mapApiArticle(apiArticle: any, index: number): Article {
   }
 }
 
-export const articles: Article[] = []
-
-function mapApiArticle(apiArticle: any, index: number): Article {
-  return {
-    id: `live-${apiArticle.article_id || index}`,
-    title: apiArticle.title,
-    summary: apiArticle.description || '',
-    content: apiArticle.content || 'Full article available at source',
-    sourceUrl: apiArticle.link,
-    sourceName: apiArticle.source_name || 'News',
-    region: apiArticle.country?.[0] === 'united states of america' ? 'North America' : 'Global',
-    country: apiArticle.country?.[0] || 'Global',
-    category: apiArticle.category?.[0] || 'News',
-    tags: apiArticle.keywords || [],
-    publishedAt: apiArticle.pubDate || new Date().toISOString(),
-    imageUrl: apiArticle.image_url || `https://picsum.photos/seed/${apiArticle.article_id}/800/450`,
-    positivityScore: 75,
-    trending: false,
-    featured: false,
-    readTime: 3,
-  }
-}
-
 function loadArticlesFromFile(): Article[] {
   if (typeof window !== 'undefined') return []
   try {
