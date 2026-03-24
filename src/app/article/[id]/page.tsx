@@ -176,6 +176,7 @@ export default async function ArticlePage({ params }: Props) {
           alt={article.title}
           category={article.category}
           tags={article.tags}
+          title={article.title}
         />
       </div>
 
