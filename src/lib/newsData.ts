@@ -951,14 +951,12 @@ async function loadFetchedArticles() {
   }
 }
 
-// Call this on module load
-loadFetchedArticles()
-
 export const articles: Article[] = []
 
-// Combined getter that includes both types
+// Only return static default articles — live articles come from /api/news (DB-backed)
+// Loading from public/articles.json causes 404s because the server cannot resolve those IDs
 export function getAllArticles(): Article[] {
-  return [...fetchedArticles, ...defaultArticles]
+  return [...defaultArticles]
 }
 
 export function getFeaturedArticles(): Article[] {
