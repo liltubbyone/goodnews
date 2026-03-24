@@ -17,6 +17,8 @@ interface ArticleCardProps {
 export function ArticleCard({ article, savedIds = [], onToggleSave, size = 'default' }: ArticleCardProps) {
   const isSaved = savedIds.includes(article.id)
   const [saving, setSaving] = useState(false)
+  const [imgSrc, setImgSrc] = useState(article.imageUrl)
+  const fallbackImg = `https://picsum.photos/seed/${article.id}/800/450`
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -50,7 +52,7 @@ export function ArticleCard({ article, savedIds = [], onToggleSave, size = 'defa
     return (
       <Link href={`/article/${article.id}`} className="flex gap-3 group p-3 rounded-xl hover:bg-gray-50 transition-colors">
         <div className="relative w-20 h-16 flex-shrink-0 rounded-lg overflow-hidden">
-          <Image src={article.imageUrl} alt={article.title} fill className="object-cover" sizes="80px" />
+          <Image src={imgSrc} alt={article.title} fill className="object-cover" sizes="80px" onError={() => setImgSrc(fallbackImg)} />
         </div>
         <div className="flex-1 min-w-0">
           <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${CATEGORY_COLORS[article.category] ?? 'bg-gray-100 text-gray-700'}`}>
@@ -72,7 +74,7 @@ export function ArticleCard({ article, savedIds = [], onToggleSave, size = 'defa
     return (
       <Link href={`/article/${article.id}`} className="card group block">
         <div className="relative h-72 w-full">
-          <Image src={article.imageUrl} alt={article.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 100vw, 50vw" />
+          <Image src={imgSrc} alt={article.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 100vw, 50vw" onError={() => setImgSrc(fallbackImg)} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6">
             <div className="flex gap-2 mb-3">
@@ -122,7 +124,7 @@ export function ArticleCard({ article, savedIds = [], onToggleSave, size = 'defa
   return (
     <Link href={`/article/${article.id}`} className="card group block">
       <div className="relative h-48 w-full">
-        <Image src={article.imageUrl} alt={article.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
+        <Image src={imgSrc} alt={article.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" onError={() => setImgSrc(fallbackImg)} />
         {article.trending && (
           <div className="absolute top-3 left-3">
             <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-orange-500 text-white shadow-sm">
