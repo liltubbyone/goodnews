@@ -28,7 +28,7 @@ export function FilterBar({ selectedRegion, selectedCategory, onRegionChange, on
               >
                 All
               </button>
-              {REGIONS.map(region => (
+              {REGIONS.filter(r => r !== 'Global').map(region => (
                 <button
                   key={region}
                   onClick={() => onRegionChange(region)}
