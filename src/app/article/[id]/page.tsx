@@ -1,7 +1,6 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { format } from 'date-fns'
 import { Clock, ExternalLink, ArrowLeft, Globe, Tag, CheckCircle2, Lightbulb, BookOpen } from 'lucide-react'
 import fs from 'fs'
@@ -9,6 +8,7 @@ import path from 'path'
 import { getArticleById, getRelatedArticles } from '@/lib/newsData'
 import { prisma } from '@/lib/db'
 import { ArticleCard } from '@/components/ArticleCard'
+import { ArticleHeroImage } from '@/components/ArticleHeroImage'
 import { SaveButton } from '@/components/SaveButton'
 import { Article, CATEGORY_COLORS, REGION_COLORS } from '@/types'
 
@@ -171,13 +171,11 @@ export default async function ArticlePage({ params }: Props) {
 
       {/* Hero image */}
       <div className="relative h-64 sm:h-80 md:h-96 rounded-2xl overflow-hidden mb-8 shadow-lg">
-        <Image
+        <ArticleHeroImage
           src={article.imageUrl}
           alt={article.title}
-          fill
-          priority
-          className="object-cover"
-          sizes="(max-width: 1024px) 100vw, 960px"
+          category={article.category}
+          tags={article.tags}
         />
       </div>
 
