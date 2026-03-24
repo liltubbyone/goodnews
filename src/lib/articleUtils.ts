@@ -8,10 +8,12 @@ export function cleanContent(raw: string): string {
 export function extractKeyPoints(title: string, summary: string, content: string): string[] {
   const cleaned = cleanContent(content)
   const allText = `${summary}. ${cleaned}`
+
+  // Primary: sentences long enough to be informative
   const sentences = allText
     .split(/(?<=[.!?])\s+/)
     .map(s => s.trim())
-    .filter(s => s.length > 50 && s.length < 260 && !/^(the|a|an|this|that|it|in|on|at)\s/i.test(s))
+    .filter(s => s.length > 40 && s.length < 300 && !/^(the|a|an|this|that|it|in|on|at)\s/i.test(s))
 
   const scored = sentences.map(s => ({
     text: s.replace(/\.$/, ''),
@@ -27,8 +29,16 @@ export function extractKeyPoints(title: string, summary: string, content: string
     .map(s => s.text)
     .filter(Boolean)
 
-  if (top.length === 0) {
-    return sentences.slice(0, 3).map(s => s.replace(/\.$/, ''))
+  if (top.length > 0) return top
+
+  // Fallback: use any sentences we found, even short ones
+  if (sentences.length > 0) return sentences.slice(0, 3).map(s => s.replace(/\.$/, ''))
+
+  // Last resort: split summary into chunks if no sentence boundaries exist
+  if (summary.trim()) {
+    const chunks = summary.match(/.{40,120}(\s|$)/g) ?? [summary]
+    return chunks.slice(0, 2).map(s => s.trim().replace(/\.$/, ''))
   }
-  return top
+
+  return []
 }

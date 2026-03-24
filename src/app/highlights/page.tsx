@@ -1,6 +1,5 @@
 import { Metadata } from 'next'
 import { getFeaturedArticles, getAllArticles } from '@/lib/newsData'
-import { ArticleCard } from '@/components/ArticleCard'
 import { ArticleHeroImage } from '@/components/ArticleHeroImage'
 import { extractKeyPoints } from '@/lib/articleUtils'
 import { Globe, Star, CheckCircle2, Lightbulb } from 'lucide-react'
@@ -170,9 +169,61 @@ export default function HighlightsPage() {
       <section>
         <h2 className="text-xl font-bold text-gray-900 mb-4">More Great Stories</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {moreStories.map(article => (
-            <ArticleCard key={article.id} article={article} />
-          ))}
+          {moreStories.map(article => {
+            const keyPoints = extractKeyPoints(article.title, article.summary, article.content)
+            return (
+              <div key={article.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                {/* Image */}
+                <Link href={`/article/${article.id}`} className="group relative h-40 block flex-shrink-0">
+                  <ArticleHeroImage
+                    src={article.imageUrl}
+                    alt={article.title}
+                    category={article.category}
+                    tags={article.tags}
+                    title={article.title}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  <div className="absolute bottom-3 left-3 flex gap-1.5">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[article.category] ?? ''}`}>{article.category}</span>
+                  </div>
+                </Link>
+
+                {/* Content */}
+                <div className="p-4 flex flex-col flex-1">
+                  <Link href={`/article/${article.id}`} className="group">
+                    <h3 className="font-bold text-gray-900 leading-snug mb-2 group-hover:text-brand-700 transition-colors line-clamp-2">
+                      {article.title}
+                    </h3>
+                  </Link>
+
+                  {/* Summary */}
+                  <p className="text-gray-500 text-sm leading-relaxed line-clamp-2 mb-3">{article.summary}</p>
+
+                  {/* Key insights */}
+                  {keyPoints.length > 0 && (
+                    <div className="border-t border-gray-50 pt-3 mt-auto">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Lightbulb className="w-3.5 h-3.5 text-brand-500" />
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Key Insights</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {keyPoints.slice(0, 2).map((point, i) => (
+                          <li key={i} className="flex gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-brand-400 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-600 text-xs leading-relaxed line-clamp-2">{point}.</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="mt-3 text-xs text-gray-400">
+                    {article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </section>
     </div>
