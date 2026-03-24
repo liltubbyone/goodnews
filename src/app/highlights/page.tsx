@@ -106,9 +106,7 @@ export default function HighlightsPage() {
             <Star className="w-5 h-5 text-amber-500" /> Featured Stories
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {restFeatured.map(article => {
-              const keyPoints = extractKeyPoints(article.title, article.summary, article.content)
-              return (
+            {restFeatured.map(article => (
                 <div key={article.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
                   {/* Image */}
                   <Link href={`/article/${article.id}`} className="group relative h-44 block flex-shrink-0">
@@ -136,31 +134,12 @@ export default function HighlightsPage() {
                     {/* Summary */}
                     <p className="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-3">{article.summary}</p>
 
-                    {/* Key insights */}
-                    {keyPoints.length > 0 && (
-                      <div className="border-t border-gray-50 pt-3 mt-auto">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Lightbulb className="w-3.5 h-3.5 text-brand-500" />
-                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Key Insights</span>
-                        </div>
-                        <ul className="space-y-1.5">
-                          {keyPoints.slice(0, 2).map((point, i) => (
-                            <li key={i} className="flex gap-2">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-brand-400 flex-shrink-0 mt-0.5" />
-                              <span className="text-gray-600 text-xs leading-relaxed line-clamp-2">{point}.</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <div className="mt-3 text-xs text-gray-400">
+                    <div className="mt-auto pt-2 text-xs text-gray-400">
                       {article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
                     </div>
                   </div>
                 </div>
-              )
-            })}
+          ))}
           </div>
         </section>
       )}
@@ -169,9 +148,7 @@ export default function HighlightsPage() {
       <section>
         <h2 className="text-xl font-bold text-gray-900 mb-4">More Great Stories</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {moreStories.map(article => {
-            const keyPoints = extractKeyPoints(article.title, article.summary, article.content)
-            return (
+          {moreStories.map(article => (
               <div key={article.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
                 {/* Image */}
                 <Link href={`/article/${article.id}`} className="group relative h-40 block flex-shrink-0">
@@ -199,31 +176,12 @@ export default function HighlightsPage() {
                   {/* Summary */}
                   <p className="text-gray-500 text-sm leading-relaxed line-clamp-2 mb-3">{article.summary}</p>
 
-                  {/* Key insights */}
-                  {keyPoints.length > 0 && (
-                    <div className="border-t border-gray-50 pt-3 mt-auto">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Lightbulb className="w-3.5 h-3.5 text-brand-500" />
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Key Insights</span>
-                      </div>
-                      <ul className="space-y-1.5">
-                        {keyPoints.slice(0, 2).map((point, i) => (
-                          <li key={i} className="flex gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-brand-400 flex-shrink-0 mt-0.5" />
-                            <span className="text-gray-600 text-xs leading-relaxed line-clamp-2">{point}.</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <div className="mt-3 text-xs text-gray-400">
+                  <div className="mt-auto pt-2 text-xs text-gray-400">
                     {article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
                   </div>
                 </div>
               </div>
-            )
-          })}
+          ))}
         </div>
       </section>
     </div>
