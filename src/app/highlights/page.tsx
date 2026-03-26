@@ -75,8 +75,8 @@ export default async function HighlightsPage() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute top-5 left-5">
-                <span className="flex items-center gap-1.5 bg-brand-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow">
-                  <Star className="w-3.5 h-3.5 fill-white" /> Editor&apos;s Top Pick
+                <span className="flex items-center gap-1.5 bg-brand-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow whitespace-nowrap">
+                  <Star className="w-3 h-3 fill-white flex-shrink-0" /> Top Pick
                 </span>
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-6">
