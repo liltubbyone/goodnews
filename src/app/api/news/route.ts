@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Article } from '@/types'
-import articlesJson from '../../../../public/articles.json'
+import fs from 'fs'
+import path from 'path'
 
 function dbToArticle(a: {
   id: string; title: string; summary: string; content: string
@@ -76,7 +77,9 @@ export async function GET(req: NextRequest) {
   if (articles.length === 0) {
     const sixMonthsAgo = new Date()
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-    articles = (articlesJson.results as any[])
+    const filePath = path.join(process.cwd(), 'public', 'articles.json')
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+    articles = (raw.results as any[])
       .filter(a => !a.pubDate || new Date(a.pubDate) >= sixMonthsAgo)
       .map((a, i): Article => ({
         id: `live-${a.article_id || i}`,

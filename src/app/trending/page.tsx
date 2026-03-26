@@ -1,7 +1,8 @@
 import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
 import { Article } from '@/types'
-import articlesJson from '../../../../public/articles.json'
+import fs from 'fs'
+import path from 'path'
 import { ArticleCard } from '@/components/ArticleCard'
 import { TrendingUp, Flame } from 'lucide-react'
 
@@ -40,7 +41,9 @@ export default async function TrendingPage() {
   let allArticles = rows.map(dbToArticle)
   if (allArticles.length === 0) {
     const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-    allArticles = (articlesJson.results as any[])
+    const filePath = path.join(process.cwd(), 'public', 'articles.json')
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+    allArticles = (raw.results as any[])
       .filter(a => !a.pubDate || new Date(a.pubDate) >= sixMonthsAgo)
       .map((a, i): Article => ({
         id: `live-${a.article_id || i}`,
