@@ -74,9 +74,12 @@ export default async function HighlightsPage() {
                 title={topStory.title}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute top-5 left-5">
+              <div className="absolute top-5 left-5 flex items-center gap-2">
                 <span className="flex items-center gap-1.5 bg-brand-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow whitespace-nowrap">
                   <Star className="w-3 h-3 fill-white flex-shrink-0" /> Editor&apos;s Top Pick
+                </span>
+                <span className="bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow whitespace-nowrap">
+                  {topStory.positivityScore}% positive
                 </span>
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-6">
