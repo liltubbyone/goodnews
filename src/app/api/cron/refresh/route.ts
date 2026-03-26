@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchAllSources, getLastFetchTime, cleanupOldArticles, deduplicateArticles } from '@/lib/newsFetcher'
+import { fetchAllSources, getLastFetchTime, cleanupOldArticles, deduplicateArticles, wipeAllArticles } from '@/lib/newsFetcher'
 
 // Triggered daily at 12:30 AM CST via vercel.json cron schedule.
 // Protect by setting CRON_SECRET in Vercel environment variables.
@@ -21,6 +21,14 @@ export async function GET(req: NextRequest) {
   const lastFetch = await getLastFetchTime()
   const now = new Date()
 
+  // ?replace=1 wipes the entire DB before fetching — always a fresh batch
+  const replace = req.nextUrl.searchParams.get('replace') === '1'
+  if (replace) {
+    await wipeAllArticles()
+    const result = await fetchAllSources()
+    return NextResponse.json({ success: true, replaced: true, timestamp: now.toISOString(), ...result })
+  }
+
   // Throttle: don't fetch more than once every 23 hours unless forced
   const force = req.nextUrl.searchParams.get('force') === '1'
   if (!force && lastFetch) {
@@ -34,7 +42,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Remove articles older than 3 months and deduplicate before adding new ones
+  // Remove articles older than 48 hours and deduplicate before adding new ones
   const cleaned = await cleanupOldArticles()
   const deduped = await deduplicateArticles()
 

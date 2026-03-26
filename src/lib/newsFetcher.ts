@@ -383,6 +383,13 @@ export async function fetchAllSources(): Promise<{
   }
 }
 
+// Wipe the entire articles table — used when ?replace=1 is passed to the cron
+export async function wipeAllArticles(): Promise<number> {
+  const result = await prisma.fetchedArticle.deleteMany({})
+  console.log(`[GoodNews] Wiped all ${result.count} articles from DB`)
+  return result.count
+}
+
 // Remove articles older than 48 hours from the database so each daily
 // run replaces yesterday's batch with a fresh one.
 export async function cleanupOldArticles(): Promise<number> {
