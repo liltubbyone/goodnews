@@ -69,8 +69,14 @@ export async function GET(req: NextRequest) {
     orderBy: [{ positivityScore: 'desc' }, { publishedAt: 'desc' }],
     take: 100,
   })
-  let articles = dbRows.map(dbToArticle)
-
+  // Deduplicate by title in case the DB has pre-existing duplicates
+  const seenTitles = new Set<string>()
+  let articles = dbRows.map(dbToArticle).filter(a => {
+    const key = a.title.toLowerCase().trim()
+    if (seenTitles.has(key)) return false
+    seenTitles.add(key)
+    return true
+  })
 
   if (type === 'trending') {
     return NextResponse.json(articles.filter(a => a.trending).slice(0, 12))

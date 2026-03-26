@@ -371,6 +371,29 @@ export async function cleanupOldArticles(): Promise<number> {
   return result.count
 }
 
+// Remove duplicate articles keeping only the highest-scoring copy per title
+export async function deduplicateArticles(): Promise<number> {
+  const all = await prisma.fetchedArticle.findMany({
+    select: { id: true, title: true, positivityScore: true },
+    orderBy: { positivityScore: 'desc' },
+  })
+  const seen = new Map<string, string>() // normalizedTitle → id to keep
+  const toDelete: string[] = []
+  for (const a of all) {
+    const key = a.title.toLowerCase().trim()
+    if (seen.has(key)) {
+      toDelete.push(a.id)
+    } else {
+      seen.set(key, a.id)
+    }
+  }
+  if (toDelete.length > 0) {
+    await prisma.fetchedArticle.deleteMany({ where: { id: { in: toDelete } } })
+    console.log(`[GoodNews] Removed ${toDelete.length} duplicate articles`)
+  }
+  return toDelete.length
+}
+
 export async function getLastFetchTime(): Promise<Date | null> {
   const latest = await prisma.fetchedArticle.findFirst({
     orderBy: { fetchedAt: 'desc' },
