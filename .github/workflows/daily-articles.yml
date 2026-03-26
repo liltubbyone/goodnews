@@ -13,7 +13,7 @@ jobs:
         run: |
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "https://goodnews-phi.vercel.app/api/cron/refresh?force=1")
+            "https://goodnews-phi.vercel.app/api/cron/refresh?replace=1")
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           BODY=$(echo "$RESPONSE" | head -1)
           echo "Status: $HTTP_CODE"
