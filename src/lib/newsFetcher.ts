@@ -231,18 +231,17 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
       url.searchParams.set('lang',       'en')
       url.searchParams.set('page-size',  '20')
       url.searchParams.set('show-fields','trailText,bodyText,thumbnail,publication')
-      // Only fetch articles from the last 48 hours
-      url.searchParams.set('from-date',  cutoff.toISOString().split('T')[0])
+      url.searchParams.set('order-by',   'newest')
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
       if (!res.ok) {
         const body = await res.text().catch(() => '')
-        console.error(`[GoodNews/Guardian] HTTP ${res.status} q=${config.q}: ${body.slice(0, 200)}`)
-        continue
+        console.error(`[GoodNews/Guardian] HTTP ${res.status} q=${config.q}: ${body.slice(0, 300)}`)
+        break // stop on auth/rate-limit errors
       }
       const data = await res.json()
       if (data.response?.status !== 'ok') {
-        console.error(`[GoodNews/Guardian] API error q=${config.q}:`, JSON.stringify(data).slice(0, 200))
+        console.error(`[GoodNews/Guardian] API error q=${config.q}:`, JSON.stringify(data).slice(0, 300))
         continue
       }
 
@@ -312,18 +311,16 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
       url.searchParams.set('lang',    'en')
       url.searchParams.set('max',     '10')
       url.searchParams.set('sortby',  'publishedAt')
-      // Only fetch articles from the last 48 hours
-      url.searchParams.set('from',    cutoff.toISOString())
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
       if (!res.ok) {
         const body = await res.text().catch(() => '')
-        console.error(`[GoodNews/GNews] HTTP ${res.status} q=${q}: ${body.slice(0, 200)}`)
-        continue
+        console.error(`[GoodNews/GNews] HTTP ${res.status} q=${q}: ${body.slice(0, 300)}`)
+        break // stop on auth/rate-limit errors
       }
       const data = await res.json()
       if (!Array.isArray(data.articles)) {
-        console.error(`[GoodNews/GNews] Unexpected response q=${q}:`, JSON.stringify(data).slice(0, 200))
+        console.error(`[GoodNews/GNews] Unexpected response q=${q}:`, JSON.stringify(data).slice(0, 300))
         continue
       }
 
