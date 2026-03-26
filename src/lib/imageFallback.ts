@@ -129,12 +129,7 @@ const CATEGORY_PHOTOS: Record<string, string> = {
 }
 
 export function buildArticleFallbackUrl(category: string, tags: string[], title: string): string {
-  const corpus = [...tags, title].join(' ').toLowerCase()
-  for (const [kw, photoId] of SORTED_KEYWORDS) {
-    if (corpus.includes(kw)) {
-      return `https://images.unsplash.com/${photoId}?w=800&h=450&fit=crop&auto=format`
-    }
-  }
-  const photoId = CATEGORY_PHOTOS[category] ?? 'photo-1441974231531-c6227db76b6e'
-  return `https://images.unsplash.com/${photoId}?w=800&h=450&fit=crop&auto=format`
+  // Always use the title as a unique seed so no two articles share the same fallback photo
+  const seed = encodeURIComponent(title.trim().slice(0, 80))
+  return `https://picsum.photos/seed/${seed}/800/450`
 }
