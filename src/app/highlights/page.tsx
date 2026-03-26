@@ -44,7 +44,7 @@ export default async function HighlightsPage() {
   const featured = allArticles.filter(a => a.featured).slice(0, 4)
   const topStory = featured[0]
   const restFeatured = featured.slice(1)
-  const moreStories = allArticles.filter(a => !a.featured).slice(0, 20)
+  const moreStories = allArticles.filter(a => !a.featured).sort((a, b) => b.positivityScore - a.positivityScore).slice(0, 20)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -164,8 +164,9 @@ export default async function HighlightsPage() {
                     {/* Summary */}
                     <p className="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-3">{article.summary}</p>
 
-                    <div className="mt-auto pt-2 text-xs text-gray-400">
-                      {article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                    <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                      <span className="text-xs text-gray-400">{article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+                      <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full whitespace-nowrap">{article.positivityScore}% ✦</span>
                     </div>
                   </div>
                 </div>
@@ -206,8 +207,9 @@ export default async function HighlightsPage() {
                   {/* Summary */}
                   <p className="text-gray-500 text-sm leading-relaxed line-clamp-2 mb-3">{article.summary}</p>
 
-                  <div className="mt-auto pt-2 text-xs text-gray-400">
-                    {article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                  <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-400">{article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
+                    <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full whitespace-nowrap">{article.positivityScore}% ✦</span>
                   </div>
                 </div>
               </div>
