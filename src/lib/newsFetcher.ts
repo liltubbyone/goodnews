@@ -235,9 +235,16 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
       url.searchParams.set('from-date',  cutoff.toISOString().split('T')[0])
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
-      if (!res.ok) continue
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        console.error(`[GoodNews/Guardian] HTTP ${res.status} q=${config.q}: ${body.slice(0, 200)}`)
+        continue
+      }
       const data = await res.json()
-      if (data.response?.status !== 'ok') continue
+      if (data.response?.status !== 'ok') {
+        console.error(`[GoodNews/Guardian] API error q=${config.q}:`, JSON.stringify(data).slice(0, 200))
+        continue
+      }
 
       for (const a of data.response.results ?? []) {
         if (!a.webTitle || !a.webUrl || seenUrls.has(a.webUrl)) continue
@@ -309,9 +316,16 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
       url.searchParams.set('from',    cutoff.toISOString())
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
-      if (!res.ok) continue
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        console.error(`[GoodNews/GNews] HTTP ${res.status} q=${q}: ${body.slice(0, 200)}`)
+        continue
+      }
       const data = await res.json()
-      if (!Array.isArray(data.articles)) continue
+      if (!Array.isArray(data.articles)) {
+        console.error(`[GoodNews/GNews] Unexpected response q=${q}:`, JSON.stringify(data).slice(0, 200))
+        continue
+      }
 
       for (const a of data.articles) {
         if (!a.title || !a.url || seenUrls.has(a.url)) continue
