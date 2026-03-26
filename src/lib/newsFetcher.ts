@@ -111,21 +111,29 @@ const NEWSDATA_CONFIGS = [
   { category: 'science',       q: 'breakthrough discovery' },
   { category: 'science',       q: 'invention innovation research' },
   { category: 'science',       q: 'space mission success launch' },
+  { category: 'science',       q: 'new study finds benefit' },
   { category: 'health',        q: 'cure treatment success recovery' },
   { category: 'health',        q: 'mental health wellness improved' },
   { category: 'health',        q: 'vaccine medicine approved helps' },
+  { category: 'health',        q: 'hospital saves lives new therapy' },
   { category: 'environment',   q: 'conservation wildlife restored' },
   { category: 'environment',   q: 'renewable energy solar clean' },
   { category: 'environment',   q: 'forest ocean rewilding protected' },
+  { category: 'environment',   q: 'species recovery habitat restored' },
   { category: 'technology',    q: 'innovation achievement milestone' },
   { category: 'technology',    q: 'new technology helps community' },
   { category: 'technology',    q: 'ai robot helps people' },
+  { category: 'technology',    q: 'startup solution clean energy' },
   { category: 'world',         q: 'humanitarian volunteers charity' },
   { category: 'world',         q: 'milestone achievement record success' },
   { category: 'world',         q: 'peace agreement diplomacy cooperation' },
+  { category: 'world',         q: 'community empowerment positive change' },
   { category: 'entertainment', q: 'celebrates award achievement' },
+  { category: 'entertainment', q: 'artist inspires raises awareness' },
   { category: 'sports',        q: 'champion record achievement inspires' },
+  { category: 'sports',        q: 'athlete overcomes wins gold' },
   { category: 'business',      q: 'jobs growth investment community' },
+  { category: 'business',      q: 'social enterprise helps local economy' },
 ]
 
 async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }> {
@@ -155,14 +163,14 @@ async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }>
         seenIds.add(a.article_id)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 40) candidates.push({ ...a, summary, score })
+        if (score >= 25) candidates.push({ ...a, summary, score })
       }
     } catch (err) {
       console.error(`[GoodNews/NewsData] category=${config.category}:`, err)
     }
   }
 
-  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 80)
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 120)
   let stored = 0
   for (const a of top) {
     const result = await upsertArticle({
@@ -190,12 +198,16 @@ const GUARDIAN_QUERIES = [
   { q: 'conservation wildlife recovery',     section: 'environment' },
   { q: 'renewable energy breakthrough',      section: 'environment' },
   { q: 'rewilding nature restored',          section: 'environment' },
+  { q: 'climate solution progress',          section: 'environment' },
   { q: 'medical breakthrough treatment',     section: 'science' },
   { q: 'space discovery research',           section: 'science' },
+  { q: 'new research benefit discovery',     section: 'science' },
   { q: 'community volunteers charity',       section: 'society' },
+  { q: 'mental health wellbeing support',    section: 'society' },
+  { q: 'poverty reduction social progress',  section: 'society' },
   { q: 'innovation technology achievement',  section: 'technology' },
   { q: 'record milestone achievement',       section: 'world' },
-  { q: 'mental health wellbeing support',    section: 'society' },
+  { q: 'aid relief humanitarian success',    section: 'world' },
   { q: 'education school success',           section: 'education' },
   { q: 'arts culture celebration award',     section: 'culture' },
   { q: 'sport champion inspiring record',    section: 'sport' },
@@ -230,14 +242,14 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
         seenUrls.add(a.webUrl)
         const summary = a.fields?.trailText ?? a.webTitle
         const score   = scorePositivity(a.webTitle, summary)
-        if (score >= 40) candidates.push({ ...a, score })
+        if (score >= 25) candidates.push({ ...a, score })
       }
     } catch (err) {
       console.error(`[GoodNews/Guardian] q=${config.q}:`, err)
     }
   }
 
-  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 80)
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 120)
   let stored = 0
   for (const a of top) {
     const result = await upsertArticle({
@@ -262,14 +274,18 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
 const GNEWS_BASE = 'https://gnews.io/api/v4/search'
 
 const GNEWS_QUERIES = [
-  { q: 'conservation wildlife success',     topic: 'science' },
-  { q: 'renewable energy record',           topic: 'science' },
-  { q: 'medical cure breakthrough',         topic: 'health' },
-  { q: 'mental health wellbeing improved',  topic: 'health' },
-  { q: 'community achievement volunteers',  topic: 'nation' },
-  { q: 'technology innovation milestone',   topic: 'technology' },
-  { q: 'education school achievement',      topic: 'nation' },
-  { q: 'award honor celebration success',   topic: 'entertainment' },
+  'conservation wildlife success',
+  'renewable energy solar record',
+  'medical cure breakthrough treatment',
+  'mental health wellbeing improved',
+  'community volunteers achievement',
+  'technology innovation milestone',
+  'education school success award',
+  'award honor celebration achievement',
+  'humanitarian relief charity help',
+  'science discovery research benefit',
+  'environment protected restored nature',
+  'sport champion record inspiring',
 ]
 
 async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
@@ -279,16 +295,16 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
   const seenUrls = new Set<string>()
   const candidates: Array<{ title: string; description: string; content: string; url: string; image: string | null; publishedAt: string; source: { name: string }; score: number }> = []
 
-  for (const config of GNEWS_QUERIES) {
+  for (const q of GNEWS_QUERIES) {
     try {
       const url = new URL(GNEWS_BASE)
-      url.searchParams.set('apikey',   GNEWS_API_KEY)
-      url.searchParams.set('q',        config.q)
-      url.searchParams.set('topic',    config.topic)
-      url.searchParams.set('lang',     'en')
-      url.searchParams.set('max',      '10')
+      url.searchParams.set('apikey',  GNEWS_API_KEY)
+      url.searchParams.set('q',       q)
+      url.searchParams.set('lang',    'en')
+      url.searchParams.set('max',     '10')
+      url.searchParams.set('sortby',  'publishedAt')
       // Only fetch articles from the last 48 hours
-      url.searchParams.set('from',     cutoff.toISOString())
+      url.searchParams.set('from',    cutoff.toISOString())
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
       if (!res.ok) continue
@@ -300,14 +316,14 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
         seenUrls.add(a.url)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 40) candidates.push({ ...a, score })
+        if (score >= 25) candidates.push({ ...a, score })
       }
     } catch (err) {
-      console.error(`[GoodNews/GNews] q=${config.q}:`, err)
+      console.error(`[GoodNews/GNews] q=${q}:`, err)
     }
   }
 
-  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 50)
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 80)
   let stored = 0
   for (const a of top) {
     const result = await upsertArticle({
