@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Article } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 function dbToArticle(a: {
   id: string; title: string; summary: string; content: string
   sourceUrl: string; sourceName: string; region: string; country: string
