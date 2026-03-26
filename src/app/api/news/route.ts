@@ -63,8 +63,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows.map(dbToArticle), noCache)
   }
 
-  // Fetch top 50 articles from DB ordered by positivity score
+  // Fetch top 50 articles published within the last 49 hours, newest first
+  const cutoff = new Date(Date.now() - 49 * 60 * 60 * 1000)
   const dbRows = await prisma.fetchedArticle.findMany({
+    where: { publishedAt: { gte: cutoff } },
     orderBy: [{ publishedAt: 'desc' }, { positivityScore: 'desc' }],
     take: 50,
   })
