@@ -34,10 +34,9 @@ function dbToArticle(a: any): Article {
 }
 
 export default async function HighlightsPage() {
-  const threeMonthsAgo = new Date()
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+  const cutoff = new Date(Date.now() - 49 * 60 * 60 * 1000)
   const rows = await prisma.fetchedArticle.findMany({
-    where: { publishedAt: { gte: threeMonthsAgo } },
+    where: { publishedAt: { gte: cutoff } },
     orderBy: [{ positivityScore: 'desc' }, { publishedAt: 'desc' }],
     take: 100,
   })
