@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { MapPin, Loader2, LocateFixed, AlertCircle } from 'lucide-react'
 import { ArticleCard } from '@/components/ArticleCard'
