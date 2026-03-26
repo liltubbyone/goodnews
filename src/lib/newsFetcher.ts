@@ -16,9 +16,9 @@ function threeMonthsAgo(): Date {
   return d
 }
 
-// Only fetch articles published in the last 48 hours for daily runs
+// Only fetch articles published in the last 49 hours for daily runs
 function oneDayAgo(): Date {
-  return new Date(Date.now() - 48 * 60 * 60 * 1000)
+  return new Date(Date.now() - 49 * 60 * 60 * 1000)
 }
 
 function estimateReadTime(text: string): number {
@@ -493,10 +493,10 @@ export async function wipeAllArticles(): Promise<number> {
   return result.count
 }
 
-// Remove articles older than 48 hours from the database so each daily
+// Remove articles older than 49 hours from the database so each daily
 // run replaces yesterday's batch with a fresh one.
 export async function cleanupOldArticles(): Promise<number> {
-  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000)
+  const cutoff = new Date(Date.now() - 49 * 60 * 60 * 1000)
   const result = await prisma.fetchedArticle.deleteMany({
     where: { publishedAt: { lt: cutoff } },
   })
