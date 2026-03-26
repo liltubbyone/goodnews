@@ -43,12 +43,11 @@ export default async function HighlightsPage() {
     take: 100,
   })
   let allArticles = rows.map(dbToArticle)
-  if (allArticles.length === 0) {
-    const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  if (allArticles.length < 50) {
     const filePath = path.join(process.cwd(), 'public', 'articles.json')
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    allArticles = (raw.results as any[])
-      .filter(a => !a.pubDate || new Date(a.pubDate) >= sixMonthsAgo)
+    const dbUrls = new Set(allArticles.map((a: Article) => a.sourceUrl))
+    const jsonArticles = (raw.results as any[])
       .map((a, i): Article => ({
         id: `live-${a.article_id || i}`,
         title: a.title ?? '', summary: a.description ?? '',
@@ -60,6 +59,8 @@ export default async function HighlightsPage() {
         imageUrl: a.image_url || `https://picsum.photos/seed/${a.article_id}/800/450`,
         positivityScore: 75, trending: i < 12, featured: i < 4, readTime: 3,
       }))
+      .filter((a: Article) => !dbUrls.has(a.sourceUrl))
+    allArticles = [...allArticles, ...jsonArticles].slice(0, 100)
   }
   const featured = allArticles.filter(a => a.featured).slice(0, 4)
   const topStory = featured[0]

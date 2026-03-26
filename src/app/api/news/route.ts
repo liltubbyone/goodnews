@@ -73,14 +73,12 @@ export async function GET(req: NextRequest) {
   })
   let articles = dbRows.map(dbToArticle)
 
-  // Fall back to articles.json when DB is empty (e.g. before first cron run)
-  if (articles.length === 0) {
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  // Supplement with articles.json when DB has fewer than 50 articles
+  if (articles.length < 50) {
     const filePath = path.join(process.cwd(), 'public', 'articles.json')
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    articles = (raw.results as any[])
-      .filter(a => !a.pubDate || new Date(a.pubDate) >= sixMonthsAgo)
+    const dbUrls = new Set(articles.map(a => a.sourceUrl))
+    const jsonArticles = (raw.results as any[])
       .map((a, i): Article => ({
         id: `live-${a.article_id || i}`,
         title: a.title ?? '',
@@ -99,6 +97,8 @@ export async function GET(req: NextRequest) {
         featured: i < 4,
         readTime: 3,
       }))
+      .filter(a => !dbUrls.has(a.sourceUrl))
+    articles = [...articles, ...jsonArticles].slice(0, 100)
   }
 
   if (type === 'trending') {
