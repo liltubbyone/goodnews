@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useState } from 'react'
-import { Menu, X, Sparkles, Search, BookmarkCheck, LogOut, User } from 'lucide-react'
+import { Menu, X, Sparkles, BookmarkCheck, LogOut, User } from 'lucide-react'
 
 export function Navbar() {
   const { data: session } = useSession()
@@ -14,7 +14,6 @@ export function Navbar() {
     { href: '/', label: 'Home' },
     { href: '/highlights', label: 'Global Highlights' },
     { href: '/trending', label: 'Trending' },
-    { href: '/search', label: 'Search' },
   ]
 
   return (
