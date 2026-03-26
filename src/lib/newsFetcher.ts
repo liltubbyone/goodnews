@@ -1,6 +1,7 @@
 import { prisma } from './db'
 import { scorePositivity, categorizeArticle, detectRegion } from './positiveFilter'
 import { cleanContent } from './articleUtils'
+import { fetchUnsplashPhoto } from './photoSearch'
 
 // ── API keys ────────────────────────────────────────────────────────────────
 const NEWSDATA_API_KEY   = process.env.NEWSDATA_API_KEY    // newsdata.io
@@ -23,11 +24,12 @@ function estimateReadTime(text: string): number {
   return Math.max(2, Math.ceil((text?.split(' ').length ?? 150) / 200))
 }
 
-// Returns a unique image URL — falls back to a per-article picsum seed if the
-// source image is already used by another article in the DB.
+// Returns a unique image URL — fetches a fresh Unsplash photo if the source
+// image is already in use, falling back to picsum if Unsplash is unavailable.
 async function resolveUniqueImageUrl(
   apiUrl: string | null | undefined,
   uniqueSeed: string,
+  keywords: string,
 ): Promise<string> {
   if (apiUrl && apiUrl.startsWith('http')) {
     const taken = await prisma.fetchedArticle.findFirst({
@@ -36,7 +38,10 @@ async function resolveUniqueImageUrl(
     }).catch(() => null)
     if (!taken) return apiUrl
   }
-  // Use the full externalId as seed so every article gets a distinct picsum image
+  // Try Unsplash with article keywords for a relevant replacement photo
+  const unsplash = await fetchUnsplashPhoto(keywords)
+  if (unsplash) return unsplash
+  // Final fallback: unique picsum seed per article
   return `https://picsum.photos/seed/${encodeURIComponent(uniqueSeed)}/800/450`
 }
 
@@ -70,7 +75,8 @@ async function upsertArticle(a: {
 
     const category = categorizeArticle(a.title, a.summary)
     const loc      = detectRegion(a.title, a.summary, a.sourceName)
-    const imageUrl = await resolveUniqueImageUrl(a.imageUrl, a.externalId)
+    const keywords = `${a.title} ${category}`.slice(0, 80)
+    const imageUrl = await resolveUniqueImageUrl(a.imageUrl, a.externalId, keywords)
 
     await prisma.fetchedArticle.create({
       data: {
