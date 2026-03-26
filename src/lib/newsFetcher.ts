@@ -24,6 +24,7 @@ function buildImageUrl(apiUrl: string | null | undefined, seed: string): string 
 }
 
 // Shared upsert — all three fetchers funnel articles through here
+
 async function upsertArticle(a: {
   externalId: string
   title: string
@@ -37,6 +38,13 @@ async function upsertArticle(a: {
   seed: string
 }): Promise<boolean> {
   try {
+    // Skip if an article with the same title already exists (dedup syndicated stories)
+    const existing = await prisma.fetchedArticle.findFirst({
+      where: { title: { equals: a.title, mode: 'insensitive' } },
+      select: { id: true },
+    }).catch(() => null)
+    if (existing) return false
+
     const category = categorizeArticle(a.title, a.summary)
     const loc      = detectRegion(a.title, a.summary, a.sourceName)
     const imageUrl = buildImageUrl(a.imageUrl, a.seed)
