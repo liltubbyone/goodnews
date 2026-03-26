@@ -33,7 +33,7 @@ export default async function TrendingPage() {
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
   const rows = await prisma.fetchedArticle.findMany({
     where: { publishedAt: { gte: threeMonthsAgo } },
-    orderBy: { publishedAt: 'desc' },
+    orderBy: [{ positivityScore: 'desc' }, { publishedAt: 'desc' }],
     take: 100,
   })
   let allArticles = rows.map(dbToArticle)

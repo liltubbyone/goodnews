@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
   // Fetch live articles from DB (most recent 100, within 3-month window)
   const dbRows = await prisma.fetchedArticle.findMany({
     where: { publishedAt: { gte: threeMonthsAgo } },
-    orderBy: { publishedAt: 'desc' },
+    orderBy: [{ positivityScore: 'desc' }, { publishedAt: 'desc' }],
     take: 100,
   })
   let articles = dbRows.map(dbToArticle)

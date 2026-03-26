@@ -129,7 +129,7 @@ export default async function ArticlePage({ params }: Props) {
       publishedAt: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
     },
     take: 3,
-    orderBy: { publishedAt: 'desc' },
+    orderBy: [{ positivityScore: 'desc' }, { publishedAt: 'desc' }],
   })
   const related: Article[] = relatedRows.map(r => ({
     id: `live-${r.id}`,
