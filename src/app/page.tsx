@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { Sparkles, Globe, ArrowRight, Zap, PenLine } from 'lucide-react'
+import { Sparkles, Globe, Zap, PenLine } from 'lucide-react'
 import { HeroSection } from '@/components/HeroSection'
 import { ArticleCard } from '@/components/ArticleCard'
 import { FilterBar } from '@/components/FilterBar'
@@ -96,9 +96,6 @@ export default function HomePage() {
           <div className="flex items-center gap-2 mb-1">
             <PenLine className="w-5 h-5 text-brand-500" />
             <h2 className="font-bold text-gray-900 text-lg">Independent Voices</h2>
-            <Link href="/highlights" className="ml-auto flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 font-semibold">
-              See all <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
           <p className="text-xs text-gray-400 mb-4 ml-7">Spotlighting independent journalists &amp; writers making a difference</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
