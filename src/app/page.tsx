@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { Sparkles, TrendingUp, Globe, ArrowRight, Zap } from 'lucide-react'
+import { Sparkles, Globe, ArrowRight, Zap, PenLine } from 'lucide-react'
 import { HeroSection } from '@/components/HeroSection'
 import { ArticleCard } from '@/components/ArticleCard'
 import { FilterBar } from '@/components/FilterBar'
@@ -30,7 +30,7 @@ export default function HomePage() {
 
   useEffect(() => {
     fetch('/api/news?type=featured').then(r => r.json()).then(setFeaturedArticles).catch(() => {})
-    fetch('/api/news?type=trending').then(r => r.json()).then(setTrendingArticles).catch(() => {})
+    fetch('/api/news?type=featured').then(r => r.json()).then(setTrendingArticles).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -90,16 +90,17 @@ export default function HomePage() {
       {/* Hero section */}
       {featuredHero && <HeroSection featuredArticle={featuredHero} sideArticles={heroSide} />}
 
-      {/* Trending strip */}
+      {/* Featured writers strip */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-orange-500" />
-            <h2 className="font-bold text-gray-900 text-lg">Trending Good News</h2>
-            <Link href="/trending" className="ml-auto flex items-center gap-1 text-sm text-orange-600 hover:text-orange-700 font-semibold">
+        <div className="bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-100 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <PenLine className="w-5 h-5 text-brand-500" />
+            <h2 className="font-bold text-gray-900 text-lg">Independent Voices</h2>
+            <Link href="/highlights" className="ml-auto flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 font-semibold">
               See all <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
+          <p className="text-xs text-gray-400 mb-4 ml-7">Spotlighting independent journalists &amp; writers making a difference</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {trendingArticles.slice(0, 3).map(article => (
               <ArticleCard
