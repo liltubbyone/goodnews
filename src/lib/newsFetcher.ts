@@ -74,16 +74,22 @@ const NEWSDATA_BASE = 'https://newsdata.io/api/1/news'
 const NEWSDATA_CONFIGS = [
   { category: 'science',       q: 'breakthrough discovery' },
   { category: 'science',       q: 'invention innovation research' },
+  { category: 'science',       q: 'space mission success launch' },
   { category: 'health',        q: 'cure treatment success recovery' },
   { category: 'health',        q: 'mental health wellness improved' },
+  { category: 'health',        q: 'vaccine medicine approved helps' },
   { category: 'environment',   q: 'conservation wildlife restored' },
   { category: 'environment',   q: 'renewable energy solar clean' },
+  { category: 'environment',   q: 'forest ocean rewilding protected' },
   { category: 'technology',    q: 'innovation achievement milestone' },
   { category: 'technology',    q: 'new technology helps community' },
+  { category: 'technology',    q: 'ai robot helps people' },
   { category: 'world',         q: 'humanitarian volunteers charity' },
   { category: 'world',         q: 'milestone achievement record success' },
+  { category: 'world',         q: 'peace agreement diplomacy cooperation' },
   { category: 'entertainment', q: 'celebrates award achievement' },
   { category: 'sports',        q: 'champion record achievement inspires' },
+  { category: 'business',      q: 'jobs growth investment community' },
 ]
 
 async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }> {
@@ -112,14 +118,14 @@ async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }>
         seenIds.add(a.article_id)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 50) candidates.push({ ...a, summary, score })
+        if (score >= 40) candidates.push({ ...a, summary, score })
       }
     } catch (err) {
       console.error(`[GoodNews/NewsData] category=${config.category}:`, err)
     }
   }
 
-  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 50)
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 80)
   let stored = 0
   for (const a of top) {
     const ok = await upsertArticle({
@@ -148,12 +154,16 @@ const GUARDIAN_BASE = 'https://content.guardianapis.com/search'
 const GUARDIAN_QUERIES = [
   { q: 'conservation wildlife recovery',     section: 'environment' },
   { q: 'renewable energy breakthrough',      section: 'environment' },
+  { q: 'rewilding nature restored',          section: 'environment' },
   { q: 'medical breakthrough treatment',     section: 'science' },
+  { q: 'space discovery research',           section: 'science' },
   { q: 'community volunteers charity',       section: 'society' },
   { q: 'innovation technology achievement',  section: 'technology' },
   { q: 'record milestone achievement',       section: 'world' },
   { q: 'mental health wellbeing support',    section: 'society' },
   { q: 'education school success',           section: 'education' },
+  { q: 'arts culture celebration award',     section: 'culture' },
+  { q: 'sport champion inspiring record',    section: 'sport' },
 ]
 
 async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }> {
@@ -184,14 +194,14 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
         seenUrls.add(a.webUrl)
         const summary = a.fields?.trailText ?? a.webTitle
         const score   = scorePositivity(a.webTitle, summary)
-        if (score >= 50) candidates.push({ ...a, score })
+        if (score >= 40) candidates.push({ ...a, score })
       }
     } catch (err) {
       console.error(`[GoodNews/Guardian] q=${config.q}:`, err)
     }
   }
 
-  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 50)
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 80)
   let stored = 0
   for (const a of top) {
     const seed = Buffer.from(a.webUrl).toString('base64').slice(-8)
@@ -222,8 +232,11 @@ const GNEWS_QUERIES = [
   { q: 'conservation wildlife success',     topic: 'science' },
   { q: 'renewable energy record',           topic: 'science' },
   { q: 'medical cure breakthrough',         topic: 'health' },
+  { q: 'mental health wellbeing improved',  topic: 'health' },
   { q: 'community achievement volunteers',  topic: 'nation' },
   { q: 'technology innovation milestone',   topic: 'technology' },
+  { q: 'education school achievement',      topic: 'nation' },
+  { q: 'award honor celebration success',   topic: 'entertainment' },
 ]
 
 async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
@@ -253,14 +266,14 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
         seenUrls.add(a.url)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 50) candidates.push({ ...a, score })
+        if (score >= 40) candidates.push({ ...a, score })
       }
     } catch (err) {
       console.error(`[GoodNews/GNews] q=${config.q}:`, err)
     }
   }
 
-  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 30)
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 50)
   let stored = 0
   for (const a of top) {
     const seed = Buffer.from(a.url).toString('base64').slice(-8)

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Article } from '@/types'
-import fs from 'fs'
-import path from 'path'
 
 function dbToArticle(a: {
   id: string; title: string; summary: string; content: string
@@ -73,33 +71,6 @@ export async function GET(req: NextRequest) {
   })
   let articles = dbRows.map(dbToArticle)
 
-  // Supplement with articles.json when DB has fewer than 50 articles
-  if (articles.length < 50) {
-    const filePath = path.join(process.cwd(), 'public', 'articles.json')
-    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    const dbUrls = new Set(articles.map(a => a.sourceUrl))
-    const jsonArticles = (raw.results as any[])
-      .map((a, i): Article => ({
-        id: `live-${a.article_id || i}`,
-        title: a.title ?? '',
-        summary: a.description ?? '',
-        content: a.content ?? 'Full article available at source',
-        sourceUrl: a.link ?? '',
-        sourceName: a.source_name ?? 'News',
-        region: a.country?.[0] === 'united states of america' ? 'North America' : 'Global',
-        country: a.country?.[0] ?? 'Global',
-        category: a.category?.[0] ?? 'Science',
-        tags: a.keywords ?? [],
-        publishedAt: a.pubDate ?? new Date().toISOString(),
-        imageUrl: a.image_url || `https://picsum.photos/seed/${a.article_id}/800/450`,
-        positivityScore: 75,
-        trending: i < 12,
-        featured: i < 4,
-        readTime: 3,
-      }))
-      .filter(a => !dbUrls.has(a.sourceUrl))
-    articles = [...articles, ...jsonArticles].slice(0, 100)
-  }
 
   if (type === 'trending') {
     return NextResponse.json(articles.filter(a => a.trending).slice(0, 12))

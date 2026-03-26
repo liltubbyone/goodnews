@@ -1,8 +1,6 @@
 import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
 import { Article } from '@/types'
-import fs from 'fs'
-import path from 'path'
 import { ArticleHeroImage } from '@/components/ArticleHeroImage'
 import { extractKeyPoints } from '@/lib/articleUtils'
 import { Globe, Star, CheckCircle2, Lightbulb } from 'lucide-react'
@@ -43,25 +41,6 @@ export default async function HighlightsPage() {
     take: 100,
   })
   let allArticles = rows.map(dbToArticle)
-  if (allArticles.length < 50) {
-    const filePath = path.join(process.cwd(), 'public', 'articles.json')
-    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    const dbUrls = new Set(allArticles.map((a: Article) => a.sourceUrl))
-    const jsonArticles = (raw.results as any[])
-      .map((a, i): Article => ({
-        id: `live-${a.article_id || i}`,
-        title: a.title ?? '', summary: a.description ?? '',
-        content: a.content ?? 'Full article available at source',
-        sourceUrl: a.link ?? '', sourceName: a.source_name ?? 'News',
-        region: a.country?.[0] === 'united states of america' ? 'North America' : 'Global',
-        country: a.country?.[0] ?? 'Global', category: a.category?.[0] ?? 'Science',
-        tags: a.keywords ?? [], publishedAt: a.pubDate ?? new Date().toISOString(),
-        imageUrl: a.image_url || `https://picsum.photos/seed/${a.article_id}/800/450`,
-        positivityScore: 75, trending: i < 12, featured: i < 4, readTime: 3,
-      }))
-      .filter((a: Article) => !dbUrls.has(a.sourceUrl))
-    allArticles = [...allArticles, ...jsonArticles].slice(0, 100)
-  }
   const featured = allArticles.filter(a => a.featured).slice(0, 4)
   const topStory = featured[0]
   const restFeatured = featured.slice(1)
