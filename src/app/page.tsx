@@ -29,15 +29,15 @@ export default function HomePage() {
   const heroSide = featuredArticles.slice(1, 4)
 
   useEffect(() => {
-    fetch('/api/news?type=featured').then(r => r.json()).then(setFeaturedArticles).catch(() => {})
-    fetch('/api/news?type=featured').then(r => r.json()).then(setTrendingArticles).catch(() => {})
+    fetch('/api/news?type=featured', { cache: 'no-store' }).then(r => r.json()).then(setFeaturedArticles).catch(() => {})
+    fetch('/api/news?type=featured', { cache: 'no-store' }).then(r => r.json()).then(setTrendingArticles).catch(() => {})
   }, [])
 
   useEffect(() => {
     const params = new URLSearchParams()
     if (selectedRegion !== 'All') params.set('region', selectedRegion)
     if (selectedCategory !== 'All') params.set('category', selectedCategory)
-    fetch(`/api/news?${params.toString()}`).then(r => r.json()).then(setFilteredArticles).catch(() => {})
+    fetch(`/api/news?${params.toString()}`, { cache: 'no-store' }).then(r => r.json()).then(setFilteredArticles).catch(() => {})
   }, [selectedRegion, selectedCategory])
 
   useEffect(() => {

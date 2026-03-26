@@ -55,10 +55,12 @@ export async function GET(req: NextRequest) {
   const idsParam = searchParams.get('ids')
 
   // Batch lookup by IDs (for saved page)
+  const noCache = { headers: { 'Cache-Control': 'no-store' } }
+
   if (idsParam) {
     const dbIds = idsParam.split(',').map(id => id.trim().replace(/^live-/, '')).filter(Boolean)
     const rows = await prisma.fetchedArticle.findMany({ where: { id: { in: dbIds } } })
-    return NextResponse.json(rows.map(dbToArticle))
+    return NextResponse.json(rows.map(dbToArticle), noCache)
   }
 
   // Fetch top 50 articles from DB ordered by positivity score
@@ -76,13 +78,13 @@ export async function GET(req: NextRequest) {
   })
 
   if (type === 'trending') {
-    return NextResponse.json(articles.filter(a => a.trending).slice(0, 12))
+    return NextResponse.json(articles.filter(a => a.trending).slice(0, 12), noCache)
   }
 
   if (type === 'featured') {
-    return NextResponse.json(articles.filter(a => a.featured).slice(0, 6))
+    return NextResponse.json(articles.filter(a => a.featured).slice(0, 6), noCache)
   }
 
   const filtered = articles.filter(a => matchesFilters(a, query, region, category))
-  return NextResponse.json(filtered)
+  return NextResponse.json(filtered, noCache)
 }
