@@ -14,17 +14,34 @@ function threeMonthsAgo(): Date {
   return d
 }
 
+// Only fetch articles published in the last 48 hours for daily runs
+function twoDaysAgo(): Date {
+  return new Date(Date.now() - 48 * 60 * 60 * 1000)
+}
+
 function estimateReadTime(text: string): number {
   return Math.max(2, Math.ceil((text?.split(' ').length ?? 150) / 200))
 }
 
-function buildImageUrl(apiUrl: string | null | undefined, seed: string): string {
-  if (apiUrl && apiUrl.startsWith('http')) return apiUrl
-  return `https://picsum.photos/seed/${seed}/800/450`
+// Returns a unique image URL — falls back to a per-article picsum seed if the
+// source image is already used by another article in the DB.
+async function resolveUniqueImageUrl(
+  apiUrl: string | null | undefined,
+  uniqueSeed: string,
+): Promise<string> {
+  if (apiUrl && apiUrl.startsWith('http')) {
+    const taken = await prisma.fetchedArticle.findFirst({
+      where: { imageUrl: apiUrl },
+      select: { id: true },
+    }).catch(() => null)
+    if (!taken) return apiUrl
+  }
+  // Use the full externalId as seed so every article gets a distinct picsum image
+  return `https://picsum.photos/seed/${encodeURIComponent(uniqueSeed)}/800/450`
 }
 
-// Shared upsert — all three fetchers funnel articles through here
-
+// Shared upsert — all three fetchers funnel articles through here.
+// Returns 'new' | 'skipped' (duplicate title or photo) | 'error'
 async function upsertArticle(a: {
   externalId: string
   title: string
@@ -35,49 +52,53 @@ async function upsertArticle(a: {
   imageUrl: string | null | undefined
   pubDate: Date
   score: number
-  seed: string
-}): Promise<boolean> {
+}): Promise<'new' | 'skipped' | 'error'> {
   try {
-    // Skip if an article with the same title already exists (dedup syndicated stories)
-    const existing = await prisma.fetchedArticle.findFirst({
-      where: { title: { equals: a.title, mode: 'insensitive' } },
+    // Skip if a title duplicate already exists (catches syndicated press releases)
+    const dupTitle = await prisma.fetchedArticle.findFirst({
+      where: { title: { equals: cleanContent(a.title), mode: 'insensitive' } },
       select: { id: true },
     }).catch(() => null)
-    if (existing) return false
+    if (dupTitle) return 'skipped'
+
+    // Skip if this exact URL was already stored
+    const dupId = await prisma.fetchedArticle.findUnique({
+      where: { externalId: a.externalId },
+      select: { id: true },
+    }).catch(() => null)
+    if (dupId) return 'skipped'
 
     const category = categorizeArticle(a.title, a.summary)
     const loc      = detectRegion(a.title, a.summary, a.sourceName)
-    const imageUrl = buildImageUrl(a.imageUrl, a.seed)
-    await prisma.fetchedArticle.upsert({
-      where:  { externalId: a.externalId },
-      update: { positivityScore: a.score, trending: a.score >= 85 },
-      create: {
-        externalId:     a.externalId,
-        title:          cleanContent(a.title),
-        summary:        cleanContent(a.summary),
-        content:        cleanContent(a.content),
-        sourceUrl:      a.sourceUrl,
-        sourceName:     a.sourceName,
-        region:         loc.region,
-        country:        loc.country,
+    const imageUrl = await resolveUniqueImageUrl(a.imageUrl, a.externalId)
+
+    await prisma.fetchedArticle.create({
+      data: {
+        externalId:      a.externalId,
+        title:           cleanContent(a.title),
+        summary:         cleanContent(a.summary),
+        content:         cleanContent(a.content),
+        sourceUrl:       a.sourceUrl,
+        sourceName:      a.sourceName,
+        region:          loc.region,
+        country:         loc.country,
         category,
-        tags:           JSON.stringify([category.toLowerCase(), loc.region.toLowerCase()]),
-        publishedAt:    a.pubDate,
+        tags:            JSON.stringify([category.toLowerCase(), loc.region.toLowerCase()]),
+        publishedAt:     a.pubDate,
         imageUrl,
         positivityScore: a.score,
-        trending:       a.score >= 75,
-        featured:       a.score >= 92,
-        readTime:       estimateReadTime(a.content),
+        trending:        a.score >= 75,
+        featured:        a.score >= 92,
+        readTime:        estimateReadTime(a.content),
       },
     })
-    return true
+    return 'new'
   } catch {
-    return false
+    return 'error'
   }
 }
 
 // ── NewsData.io ──────────────────────────────────────────────────────────────
-// Free plan: 200 credits/day, 10 articles/request
 const NEWSDATA_BASE = 'https://newsdata.io/api/1/news'
 
 const NEWSDATA_CONFIGS = [
@@ -104,7 +125,7 @@ const NEWSDATA_CONFIGS = [
 async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }> {
   if (!NEWSDATA_API_KEY) return { fetched: 0, stored: 0 }
 
-  const cutoff  = threeMonthsAgo()
+  const cutoff  = twoDaysAgo()
   const seenIds = new Set<string>()
   const candidates: Array<{ title: string; summary: string; content: string; link: string; source_name: string; image_url: string | null; pubDate: string; article_id: string; score: number }> = []
 
@@ -123,6 +144,7 @@ async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }>
 
       for (const a of data.results) {
         if (!a.title || !a.link || seenIds.has(a.article_id)) continue
+        // Only keep articles from the last 48 hours
         if (a.pubDate && new Date(a.pubDate) < cutoff) continue
         seenIds.add(a.article_id)
         const summary = a.description ?? a.title
@@ -137,7 +159,7 @@ async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }>
   const top = candidates.sort((a, b) => b.score - a.score).slice(0, 80)
   let stored = 0
   for (const a of top) {
-    const ok = await upsertArticle({
+    const result = await upsertArticle({
       externalId: a.link,
       title:      a.title,
       summary:    a.summary,
@@ -147,17 +169,15 @@ async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }>
       imageUrl:   a.image_url,
       pubDate:    a.pubDate ? new Date(a.pubDate) : new Date(),
       score:      a.score,
-      seed:       a.article_id.slice(-8),
     })
-    if (ok) stored++
+    if (result === 'new') stored++
   }
 
-  console.log(`[GoodNews/NewsData] ${candidates.length} candidates → ${stored} stored`)
+  console.log(`[GoodNews/NewsData] ${candidates.length} candidates → ${stored} new`)
   return { fetched: candidates.length, stored }
 }
 
 // ── The Guardian ─────────────────────────────────────────────────────────────
-// Free open-platform: 500 req/day, up to 50 results/request
 const GUARDIAN_BASE = 'https://content.guardianapis.com/search'
 
 const GUARDIAN_QUERIES = [
@@ -178,8 +198,8 @@ const GUARDIAN_QUERIES = [
 async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }> {
   if (!GUARDIAN_API_KEY) return { fetched: 0, stored: 0 }
 
-  const cutoff    = threeMonthsAgo()
-  const seenUrls  = new Set<string>()
+  const cutoff   = twoDaysAgo()
+  const seenUrls = new Set<string>()
   const candidates: Array<{ webTitle: string; webUrl: string; webPublicationDate: string; fields?: { trailText?: string; bodyText?: string; thumbnail?: string; publication?: string }; score: number }> = []
 
   for (const config of GUARDIAN_QUERIES) {
@@ -191,6 +211,7 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
       url.searchParams.set('lang',       'en')
       url.searchParams.set('page-size',  '20')
       url.searchParams.set('show-fields','trailText,bodyText,thumbnail,publication')
+      // Only fetch articles from the last 48 hours
       url.searchParams.set('from-date',  cutoff.toISOString().split('T')[0])
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
@@ -213,8 +234,7 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
   const top = candidates.sort((a, b) => b.score - a.score).slice(0, 80)
   let stored = 0
   for (const a of top) {
-    const seed = Buffer.from(a.webUrl).toString('base64').slice(-8)
-    const ok = await upsertArticle({
+    const result = await upsertArticle({
       externalId: a.webUrl,
       title:      a.webTitle,
       summary:    a.fields?.trailText ?? a.webTitle,
@@ -224,17 +244,15 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
       imageUrl:   a.fields?.thumbnail,
       pubDate:    new Date(a.webPublicationDate),
       score:      a.score,
-      seed,
     })
-    if (ok) stored++
+    if (result === 'new') stored++
   }
 
-  console.log(`[GoodNews/Guardian] ${candidates.length} candidates → ${stored} stored`)
+  console.log(`[GoodNews/Guardian] ${candidates.length} candidates → ${stored} new`)
   return { fetched: candidates.length, stored }
 }
 
 // ── GNews ────────────────────────────────────────────────────────────────────
-// Free plan: 100 req/day, 10 articles/request
 const GNEWS_BASE = 'https://gnews.io/api/v4/search'
 
 const GNEWS_QUERIES = [
@@ -251,7 +269,7 @@ const GNEWS_QUERIES = [
 async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
   if (!GNEWS_API_KEY) return { fetched: 0, stored: 0 }
 
-  const cutoff   = threeMonthsAgo()
+  const cutoff   = twoDaysAgo()
   const seenUrls = new Set<string>()
   const candidates: Array<{ title: string; description: string; content: string; url: string; image: string | null; publishedAt: string; source: { name: string }; score: number }> = []
 
@@ -263,6 +281,7 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
       url.searchParams.set('topic',    config.topic)
       url.searchParams.set('lang',     'en')
       url.searchParams.set('max',      '10')
+      // Only fetch articles from the last 48 hours
       url.searchParams.set('from',     cutoff.toISOString())
 
       const res = await fetch(url.toString(), { cache: 'no-store' })
@@ -285,8 +304,7 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
   const top = candidates.sort((a, b) => b.score - a.score).slice(0, 50)
   let stored = 0
   for (const a of top) {
-    const seed = Buffer.from(a.url).toString('base64').slice(-8)
-    const ok = await upsertArticle({
+    const result = await upsertArticle({
       externalId: a.url,
       title:      a.title,
       summary:    a.description ?? a.title,
@@ -296,23 +314,20 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
       imageUrl:   a.image,
       pubDate:    new Date(a.publishedAt),
       score:      a.score,
-      seed,
     })
-    if (ok) stored++
+    if (result === 'new') stored++
   }
 
-  console.log(`[GoodNews/GNews] ${candidates.length} candidates → ${stored} stored`)
+  console.log(`[GoodNews/GNews] ${candidates.length} candidates → ${stored} new`)
   return { fetched: candidates.length, stored }
 }
 
 // ── Public exports ───────────────────────────────────────────────────────────
 
-// Legacy single-source export (kept for backward compat)
 export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; stored: number }> {
   return fetchFromNewsdata()
 }
 
-// Run all three APIs in parallel and combine results
 export async function fetchAllSources(): Promise<{
   newsdata: { fetched: number; stored: number }
   guardian: { fetched: number; stored: number }
