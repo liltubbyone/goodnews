@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getAllArticles } from '@/lib/newsData'
 import { Article } from '@/types'
+import articlesJson from '../../../../public/articles.json'
 
 function dbToArticle(a: {
   id: string; title: string; summary: string; content: string
@@ -74,13 +74,28 @@ export async function GET(req: NextRequest) {
 
   // Fall back to articles.json when DB is empty (e.g. before first cron run)
   if (articles.length === 0) {
-    const fallback = getAllArticles()
-    // Mark top articles as featured/trending so hero and trending strip work
-    articles = fallback.map((a, i) => ({
-      ...a,
-      featured: i < 4,
-      trending: i < 12,
-    }))
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    articles = (articlesJson.results as any[])
+      .filter(a => !a.pubDate || new Date(a.pubDate) >= sixMonthsAgo)
+      .map((a, i): Article => ({
+        id: `live-${a.article_id || i}`,
+        title: a.title ?? '',
+        summary: a.description ?? '',
+        content: a.content ?? 'Full article available at source',
+        sourceUrl: a.link ?? '',
+        sourceName: a.source_name ?? 'News',
+        region: a.country?.[0] === 'united states of america' ? 'North America' : 'Global',
+        country: a.country?.[0] ?? 'Global',
+        category: a.category?.[0] ?? 'Science',
+        tags: a.keywords ?? [],
+        publishedAt: a.pubDate ?? new Date().toISOString(),
+        imageUrl: a.image_url || `https://picsum.photos/seed/${a.article_id}/800/450`,
+        positivityScore: 75,
+        trending: i < 12,
+        featured: i < 4,
+        readTime: 3,
+      }))
   }
 
   if (type === 'trending') {
