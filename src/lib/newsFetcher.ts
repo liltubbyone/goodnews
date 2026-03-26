@@ -56,7 +56,7 @@ async function upsertArticle(a: {
         publishedAt:    a.pubDate,
         imageUrl,
         positivityScore: a.score,
-        trending:       a.score >= 85,
+        trending:       a.score >= 70,
         featured:       a.score >= 92,
         readTime:       estimateReadTime(a.content),
       },
