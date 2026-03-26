@@ -1,5 +1,12 @@
 export function cleanContent(raw: string): string {
   return raw
+    .replace(/<[^>]+>/g, ' ')           // strip HTML tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/ONLY AVAILABLE IN (PAID|PROFESSIONAL|CORPORATE) PLANS?\\.?/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim()

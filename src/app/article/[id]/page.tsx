@@ -220,7 +220,7 @@ export default async function ArticlePage({ params }: Props) {
           {/* Summary highlight */}
           <div className="bg-brand-50 border-l-4 border-brand-500 pl-4 py-4 pr-4 rounded-r-xl mb-6">
             <p className="text-base text-gray-800 font-medium leading-relaxed">
-              {article.summary}
+              {cleanContent(article.summary)}
             </p>
           </div>
 

@@ -1,5 +1,6 @@
 import { prisma } from './db'
 import { scorePositivity, categorizeArticle, detectRegion } from './positiveFilter'
+import { cleanContent } from './articleUtils'
 
 // ── API keys ────────────────────────────────────────────────────────────────
 const NEWSDATA_API_KEY   = process.env.NEWSDATA_API_KEY    // newsdata.io
@@ -44,9 +45,9 @@ async function upsertArticle(a: {
       update: { positivityScore: a.score, trending: a.score >= 85 },
       create: {
         externalId:     a.externalId,
-        title:          a.title,
-        summary:        a.summary,
-        content:        a.content,
+        title:          cleanContent(a.title),
+        summary:        cleanContent(a.summary),
+        content:        cleanContent(a.content),
         sourceUrl:      a.sourceUrl,
         sourceName:     a.sourceName,
         region:         loc.region,
