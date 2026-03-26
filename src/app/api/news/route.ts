@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 
   // Fetch top 50 articles from DB ordered by positivity score
   const dbRows = await prisma.fetchedArticle.findMany({
-    orderBy: [{ positivityScore: 'desc' }, { publishedAt: 'desc' }],
+    orderBy: [{ publishedAt: 'desc' }, { positivityScore: 'desc' }],
     take: 50,
   })
   // Deduplicate by title in case the DB has pre-existing duplicates
