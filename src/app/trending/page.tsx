@@ -40,10 +40,6 @@ export default async function TrendingPage() {
   const flagged = allArticles.filter(a => a.trending)
   const byScore = allArticles.filter(a => !a.trending).sort((a, b) => b.positivityScore - a.positivityScore)
   const trending = [...flagged, ...byScore].slice(0, 20)
-  const highScore = allArticles
-    .filter(a => !a.trending)
-    .sort((a, b) => b.positivityScore - a.positivityScore)
-    .slice(0, 8)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -81,23 +77,6 @@ export default async function TrendingPage() {
         </div>
       </section>
 
-      {/* Highest positivity scores */}
-      <section>
-        <div className="flex items-center gap-2 mb-5">
-          <span className="text-xl">✨</span>
-          <h2 className="text-xl font-bold text-gray-900">Highest Positivity Scores</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {highScore.map(article => (
-            <div key={article.id} className="relative">
-              <ArticleCard article={article} />
-              <div className="absolute top-3 right-3 bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow">
-                {article.positivityScore}% positive
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }
