@@ -16,7 +16,7 @@ function threeMonthsAgo(): Date {
 }
 
 // Only fetch articles published in the last 48 hours for daily runs
-function twoDaysAgo(): Date {
+function oneDayAgo(): Date {
   return new Date(Date.now() - 48 * 60 * 60 * 1000)
 }
 
@@ -139,7 +139,7 @@ const NEWSDATA_CONFIGS = [
 async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }> {
   if (!NEWSDATA_API_KEY) return { fetched: 0, stored: 0 }
 
-  const cutoff  = twoDaysAgo()
+  const cutoff  = oneDayAgo()
   const seenIds = new Set<string>()
   const candidates: Array<{ title: string; summary: string; content: string; link: string; source_name: string; image_url: string | null; pubDate: string; article_id: string; score: number }> = []
 
@@ -158,12 +158,12 @@ async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }>
 
       for (const a of data.results) {
         if (!a.title || !a.link || seenIds.has(a.article_id)) continue
-        // Only keep articles from the last 48 hours (cutoff = twoDaysAgo)
+        // Only keep articles from the last 48 hours
         if (a.pubDate && new Date(a.pubDate) < cutoff) continue
         seenIds.add(a.article_id)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 25) candidates.push({ ...a, summary, score })
+        if (score >= 40) candidates.push({ ...a, summary, score })
       }
     } catch (err) {
       console.error(`[GoodNews/NewsData] category=${config.category}:`, err)
@@ -216,7 +216,7 @@ const GUARDIAN_QUERIES = [
 async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }> {
   if (!GUARDIAN_API_KEY) return { fetched: 0, stored: 0 }
 
-  const cutoff   = twoDaysAgo()
+  const cutoff   = oneDayAgo()
   const seenUrls = new Set<string>()
   const candidates: Array<{ webTitle: string; webUrl: string; webPublicationDate: string; fields?: { trailText?: string; bodyText?: string; thumbnail?: string; publication?: string }; score: number }> = []
 
@@ -242,7 +242,7 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
         seenUrls.add(a.webUrl)
         const summary = a.fields?.trailText ?? a.webTitle
         const score   = scorePositivity(a.webTitle, summary)
-        if (score >= 25) candidates.push({ ...a, score })
+        if (score >= 40) candidates.push({ ...a, score })
       }
     } catch (err) {
       console.error(`[GoodNews/Guardian] q=${config.q}:`, err)
@@ -291,7 +291,7 @@ const GNEWS_QUERIES = [
 async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
   if (!GNEWS_API_KEY) return { fetched: 0, stored: 0 }
 
-  const cutoff   = twoDaysAgo()
+  const cutoff   = oneDayAgo()
   const seenUrls = new Set<string>()
   const candidates: Array<{ title: string; description: string; content: string; url: string; image: string | null; publishedAt: string; source: { name: string }; score: number }> = []
 
@@ -316,7 +316,7 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
         seenUrls.add(a.url)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 25) candidates.push({ ...a, score })
+        if (score >= 40) candidates.push({ ...a, score })
       }
     } catch (err) {
       console.error(`[GoodNews/GNews] q=${q}:`, err)
