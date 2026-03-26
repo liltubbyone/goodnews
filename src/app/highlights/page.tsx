@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
 import { Article } from '@/types'
 import { ArticleHeroImage } from '@/components/ArticleHeroImage'
+import { ArticleCard } from '@/components/ArticleCard'
 import { extractKeyPoints } from '@/lib/articleUtils'
 import { Globe, Star, CheckCircle2, Lightbulb } from 'lucide-react'
 import Link from 'next/link'
@@ -184,46 +185,18 @@ export default async function HighlightsPage() {
 
       {/* More stories */}
       <section>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">More Great Stories</h2>
+        <div className="flex items-center gap-2 mb-5">
+          <span className="text-xl">✨</span>
+          <h2 className="text-xl font-bold text-gray-900">Highest Positivity Scores</h2>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {moreStories.map(article => (
-              <div key={article.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-                {/* Image */}
-                <div className="relative">
-                  <Link href={`/article/${article.id}`} className="group relative h-40 block flex-shrink-0">
-                    <ArticleHeroImage
-                      src={article.imageUrl}
-                      alt={article.title}
-                      category={article.category}
-                      tags={article.tags}
-                      title={article.title}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    <div className="absolute bottom-3 left-3 flex gap-1.5">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[article.category] ?? ''}`}>{article.category}</span>
-                    </div>
-                  </Link>
-                  <div className="absolute top-3 right-3 bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow">
-                    {article.positivityScore}% positive
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-4 flex flex-col flex-1">
-                  <Link href={`/article/${article.id}`} className="group">
-                    <h3 className="font-bold text-gray-900 leading-snug mb-2 group-hover:text-brand-700 transition-colors line-clamp-2">
-                      {article.title}
-                    </h3>
-                  </Link>
-
-                  {/* Summary */}
-                  <p className="text-gray-500 text-sm leading-relaxed line-clamp-2 mb-3">{article.summary}</p>
-
-                  <div className="mt-auto pt-2 text-xs text-gray-400">
-                    {article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
-                  </div>
-                </div>
+            <div key={article.id} className="relative">
+              <ArticleCard article={article} />
+              <div className="absolute top-3 right-3 bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow">
+                {article.positivityScore}% positive
               </div>
+            </div>
           ))}
         </div>
       </section>
