@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { CATEGORY_COLORS, REGION_COLORS } from '@/types'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Global Highlights' }
 
 function dbToArticle(a: any): Article {

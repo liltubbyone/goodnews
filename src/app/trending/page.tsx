@@ -5,6 +5,7 @@ import { Article } from '@/types'
 import { ArticleCard } from '@/components/ArticleCard'
 import { TrendingUp, Flame } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Trending Good News' }
 
 function dbToArticle(a: any): Article {
