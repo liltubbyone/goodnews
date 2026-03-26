@@ -7,6 +7,7 @@ import { fetchUnsplashPhoto } from './photoSearch'
 const NEWSDATA_API_KEY   = process.env.NEWSDATA_API_KEY    // newsdata.io
 const GUARDIAN_API_KEY   = process.env.GUARDIAN_API_KEY    // open-platform.theguardian.com
 const GNEWS_API_KEY      = process.env.GNEWS_API_KEY       // gnews.io
+const NEWSAPI_API_KEY    = process.env.news_api_api_key    // newsapi.org
 
 // Articles older than 3 months are excluded everywhere
 function threeMonthsAgo(): Date {
@@ -360,6 +361,89 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
   return { fetched: candidates.length, stored }
 }
 
+// ── NewsAPI.org ───────────────────────────────────────────────────────────────
+const NEWSAPI_BASE = 'https://newsapi.org/v2/everything'
+
+const NEWSAPI_QUERIES = [
+  'conservation wildlife recovery',
+  'renewable energy breakthrough',
+  'medical breakthrough cure treatment',
+  'mental health wellbeing improved',
+  'community volunteers charity achievement',
+  'technology innovation milestone',
+  'education school success award',
+  'humanitarian relief charity',
+  'science discovery research benefit',
+  'space mission success launch',
+  'environment protected restored nature',
+  'sport champion record inspiring',
+  'peace diplomacy cooperation',
+  'startup solution social impact',
+]
+
+async function fetchFromNewsApi(): Promise<{ fetched: number; stored: number }> {
+  if (!NEWSAPI_API_KEY) return { fetched: 0, stored: 0 }
+
+  const cutoff   = oneDayAgo()
+  const seenUrls = new Set<string>()
+  const candidates: Array<{ title: string; description: string; content: string; url: string; urlToImage: string | null; publishedAt: string; source: { name: string }; score: number }> = []
+
+  for (const q of NEWSAPI_QUERIES) {
+    try {
+      const url = new URL(NEWSAPI_BASE)
+      url.searchParams.set('apiKey',   NEWSAPI_API_KEY)
+      url.searchParams.set('q',        q)
+      url.searchParams.set('language', 'en')
+      url.searchParams.set('sortBy',   'publishedAt')
+      url.searchParams.set('pageSize', '20')
+
+      const res = await fetch(url.toString(), { cache: 'no-store' })
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        console.error(`[GoodNews/NewsAPI] HTTP ${res.status} q=${q}: ${body.slice(0, 300)}`)
+        continue
+      }
+      const data = await res.json()
+      if (data.status !== 'ok' || !Array.isArray(data.articles)) {
+        console.error(`[GoodNews/NewsAPI] Error q=${q}:`, JSON.stringify(data).slice(0, 300))
+        continue
+      }
+
+      console.log(`[GoodNews/NewsAPI] q="${q}" → ${data.articles.length} raw results`)
+      for (const a of data.articles) {
+        if (!a.title || !a.url || a.title === '[Removed]' || seenUrls.has(a.url)) continue
+        if (a.publishedAt && new Date(a.publishedAt) < cutoff) continue
+        seenUrls.add(a.url)
+        const summary = a.description ?? a.title
+        const score   = scorePositivity(a.title, summary)
+        if (score >= 40) candidates.push({ ...a, score })
+      }
+    } catch (err) {
+      console.error(`[GoodNews/NewsAPI] q=${q}:`, err)
+    }
+  }
+
+  const top = candidates.sort((a, b) => b.score - a.score).slice(0, 80)
+  let stored = 0
+  for (const a of top) {
+    const result = await upsertArticle({
+      externalId: a.url,
+      title:      a.title,
+      summary:    a.description ?? a.title,
+      content:    a.content     ?? a.description ?? a.title,
+      sourceUrl:  a.url,
+      sourceName: a.source?.name ?? 'NewsAPI',
+      imageUrl:   a.urlToImage,
+      pubDate:    new Date(a.publishedAt),
+      score:      a.score,
+    })
+    if (result === 'new') stored++
+  }
+
+  console.log(`[GoodNews/NewsAPI] ${candidates.length} candidates → ${stored} new`)
+  return { fetched: candidates.length, stored }
+}
+
 // ── Public exports ───────────────────────────────────────────────────────────
 
 export async function fetchAndStorePositiveNews(): Promise<{ fetched: number; stored: number }> {
@@ -370,29 +454,34 @@ export async function fetchAllSources(): Promise<{
   newsdata: { fetched: number; stored: number }
   guardian: { fetched: number; stored: number }
   gnews:    { fetched: number; stored: number }
+  newsapi:  { fetched: number; stored: number }
   total:    { fetched: number; stored: number }
 }> {
-  const [newsdata, guardian, gnews] = await Promise.allSettled([
+  const [newsdata, guardian, gnews, newsapi] = await Promise.allSettled([
     fetchFromNewsdata(),
     fetchFromGuardian(),
     fetchFromGnews(),
+    fetchFromNewsApi(),
   ])
 
   const nd = newsdata.status === 'fulfilled' ? newsdata.value : { fetched: 0, stored: 0 }
   const gu = guardian.status === 'fulfilled' ? guardian.value : { fetched: 0, stored: 0 }
   const gn = gnews.status    === 'fulfilled' ? gnews.value    : { fetched: 0, stored: 0 }
+  const na = newsapi.status  === 'fulfilled' ? newsapi.value  : { fetched: 0, stored: 0 }
 
   if (newsdata.status === 'rejected') console.error('[GoodNews] NewsData source failed:', newsdata.reason)
   if (guardian.status === 'rejected') console.error('[GoodNews] Guardian source failed:', guardian.reason)
   if (gnews.status    === 'rejected') console.error('[GoodNews] GNews source failed:',    gnews.reason)
+  if (newsapi.status  === 'rejected') console.error('[GoodNews] NewsAPI source failed:',  newsapi.reason)
 
   return {
     newsdata: nd,
     guardian: gu,
     gnews:    gn,
+    newsapi:  na,
     total: {
-      fetched: nd.fetched + gu.fetched + gn.fetched,
-      stored:  nd.stored  + gu.stored  + gn.stored,
+      fetched: nd.fetched + gu.fetched + gn.fetched + na.fetched,
+      stored:  nd.stored  + gu.stored  + gn.stored  + na.stored,
     },
   }
 }
