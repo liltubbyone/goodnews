@@ -237,7 +237,7 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
       if (!res.ok) {
         const body = await res.text().catch(() => '')
         console.error(`[GoodNews/Guardian] HTTP ${res.status} q=${config.q}: ${body.slice(0, 300)}`)
-        break // stop on auth/rate-limit errors
+        continue
       }
       const data = await res.json()
       if (data.response?.status !== 'ok') {
@@ -245,7 +245,9 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
         continue
       }
 
-      for (const a of data.response.results ?? []) {
+      const results = data.response.results ?? []
+      console.log(`[GoodNews/Guardian] q="${config.q}" → ${results.length} raw results`)
+      for (const a of results) {
         if (!a.webTitle || !a.webUrl || seenUrls.has(a.webUrl)) continue
         seenUrls.add(a.webUrl)
         const summary = a.fields?.trailText ?? a.webTitle
@@ -316,7 +318,7 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
       if (!res.ok) {
         const body = await res.text().catch(() => '')
         console.error(`[GoodNews/GNews] HTTP ${res.status} q=${q}: ${body.slice(0, 300)}`)
-        break // stop on auth/rate-limit errors
+        continue
       }
       const data = await res.json()
       if (!Array.isArray(data.articles)) {
@@ -324,6 +326,7 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
         continue
       }
 
+      console.log(`[GoodNews/GNews] q="${q}" → ${data.articles.length} raw results`)
       for (const a of data.articles) {
         if (!a.title || !a.url || seenUrls.has(a.url)) continue
         seenUrls.add(a.url)
