@@ -7,7 +7,16 @@ import { fetchAllSources, getLastFetchTime, cleanupOldArticles } from '@/lib/new
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
 
-  // Auth temporarily disabled for manual trigger — re-enable after run
+  if (cronSecret) {
+    // Vercel crons pass: Authorization: Bearer <CRON_SECRET>
+    const authHeader = req.headers.get('authorization') ?? ''
+    const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+    // Also accept ?secret= for manual triggering
+    const querySecret = req.nextUrl.searchParams.get('secret')
+    if (bearerToken !== cronSecret && querySecret !== cronSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  }
 
   const lastFetch = await getLastFetchTime()
   const now = new Date()
