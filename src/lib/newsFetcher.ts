@@ -24,18 +24,14 @@ function estimateReadTime(text: string): number {
   return Math.max(2, Math.ceil((text?.split(' ').length ?? 150) / 200))
 }
 
-// Returns a topically relevant image URL.
-// Always tries Unsplash first (so the photo matches the article topic),
-// then falls back to the publisher's image, then picsum.
+// Returns a unique image URL — uses the article's original photo first,
+// falls back to Unsplash if missing or already in use, then picsum.
 async function resolveUniqueImageUrl(
   apiUrl: string | null | undefined,
   uniqueSeed: string,
   keywords: string,
 ): Promise<string> {
-  // Prefer Unsplash — searched by article keywords for topic relevance
-  const unsplash = await fetchUnsplashPhoto(keywords)
-  if (unsplash) return unsplash
-  // Fall back to publisher image only if Unsplash is unavailable
+  // 1. Use the article's original photo if it exists and isn't already stored
   if (apiUrl && apiUrl.startsWith('http')) {
     const taken = await prisma.fetchedArticle.findFirst({
       where: { imageUrl: apiUrl },
@@ -43,7 +39,10 @@ async function resolveUniqueImageUrl(
     }).catch(() => null)
     if (!taken) return apiUrl
   }
-  // Final fallback: unique picsum seed per article
+  // 2. Fetch a relevant Unsplash photo using article title keywords
+  const unsplash = await fetchUnsplashPhoto(keywords)
+  if (unsplash) return unsplash
+  // 3. Final fallback: unique picsum seed per article
   return `https://picsum.photos/seed/${encodeURIComponent(uniqueSeed)}/800/450`
 }
 
