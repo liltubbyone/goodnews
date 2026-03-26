@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
+import { getAllArticles } from '@/lib/newsData'
 import { Article } from '@/types'
 import { ArticleHeroImage } from '@/components/ArticleHeroImage'
 import { extractKeyPoints } from '@/lib/articleUtils'
@@ -39,7 +40,11 @@ export default async function HighlightsPage() {
     orderBy: { publishedAt: 'desc' },
     take: 100,
   })
-  const allArticles = rows.map(dbToArticle)
+  let allArticles = rows.map(dbToArticle)
+  if (allArticles.length === 0) {
+    const fallback = getAllArticles()
+    allArticles = fallback.map((a, i) => ({ ...a, featured: i < 4, trending: i < 12 }))
+  }
   const featured = allArticles.filter(a => a.featured).slice(0, 4)
   const topStory = featured[0]
   const restFeatured = featured.slice(1)

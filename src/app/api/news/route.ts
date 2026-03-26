@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getAllArticles } from '@/lib/newsData'
 import { Article } from '@/types'
 
 function dbToArticle(a: {
@@ -69,7 +70,18 @@ export async function GET(req: NextRequest) {
     orderBy: { publishedAt: 'desc' },
     take: 100,
   })
-  const articles = dbRows.map(dbToArticle)
+  let articles = dbRows.map(dbToArticle)
+
+  // Fall back to articles.json when DB is empty (e.g. before first cron run)
+  if (articles.length === 0) {
+    const fallback = getAllArticles()
+    // Mark top articles as featured/trending so hero and trending strip work
+    articles = fallback.map((a, i) => ({
+      ...a,
+      featured: i < 4,
+      trending: i < 12,
+    }))
+  }
 
   if (type === 'trending') {
     return NextResponse.json(articles.filter(a => a.trending).slice(0, 12))

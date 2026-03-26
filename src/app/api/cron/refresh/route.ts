@@ -5,11 +5,17 @@ import { fetchAllSources, getLastFetchTime, cleanupOldArticles } from '@/lib/new
 // Protect by setting CRON_SECRET in Vercel environment variables.
 
 export async function GET(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get('secret')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && secret !== cronSecret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (cronSecret) {
+    // Vercel crons pass: Authorization: Bearer <CRON_SECRET>
+    const authHeader = req.headers.get('authorization') ?? ''
+    const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+    // Also accept ?secret= for manual triggering
+    const querySecret = req.nextUrl.searchParams.get('secret')
+    if (bearerToken !== cronSecret && querySecret !== cronSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   const lastFetch = await getLastFetchTime()

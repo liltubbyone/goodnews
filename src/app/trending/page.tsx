@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import { prisma } from '@/lib/db'
+import { getAllArticles } from '@/lib/newsData'
 import { Article } from '@/types'
 import { ArticleCard } from '@/components/ArticleCard'
 import { TrendingUp, Flame } from 'lucide-react'
@@ -35,7 +36,11 @@ export default async function TrendingPage() {
     orderBy: { publishedAt: 'desc' },
     take: 100,
   })
-  const allArticles = rows.map(dbToArticle)
+  let allArticles = rows.map(dbToArticle)
+  if (allArticles.length === 0) {
+    const fallback = getAllArticles()
+    allArticles = fallback.map((a, i) => ({ ...a, featured: i < 4, trending: i < 12 }))
+  }
   const trending = allArticles.filter(a => a.trending).slice(0, 20)
   const highScore = allArticles
     .filter(a => !a.trending)
