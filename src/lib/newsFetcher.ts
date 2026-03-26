@@ -24,13 +24,18 @@ function estimateReadTime(text: string): number {
   return Math.max(2, Math.ceil((text?.split(' ').length ?? 150) / 200))
 }
 
-// Returns a unique image URL — fetches a fresh Unsplash photo if the source
-// image is already in use, falling back to picsum if Unsplash is unavailable.
+// Returns a topically relevant image URL.
+// Always tries Unsplash first (so the photo matches the article topic),
+// then falls back to the publisher's image, then picsum.
 async function resolveUniqueImageUrl(
   apiUrl: string | null | undefined,
   uniqueSeed: string,
   keywords: string,
 ): Promise<string> {
+  // Prefer Unsplash — searched by article keywords for topic relevance
+  const unsplash = await fetchUnsplashPhoto(keywords)
+  if (unsplash) return unsplash
+  // Fall back to publisher image only if Unsplash is unavailable
   if (apiUrl && apiUrl.startsWith('http')) {
     const taken = await prisma.fetchedArticle.findFirst({
       where: { imageUrl: apiUrl },
@@ -38,9 +43,6 @@ async function resolveUniqueImageUrl(
     }).catch(() => null)
     if (!taken) return apiUrl
   }
-  // Try Unsplash with article keywords for a relevant replacement photo
-  const unsplash = await fetchUnsplashPhoto(keywords)
-  if (unsplash) return unsplash
   // Final fallback: unique picsum seed per article
   return `https://picsum.photos/seed/${encodeURIComponent(uniqueSeed)}/800/450`
 }
@@ -75,7 +77,8 @@ async function upsertArticle(a: {
 
     const category = categorizeArticle(a.title, a.summary)
     const loc      = detectRegion(a.title, a.summary, a.sourceName)
-    const keywords = `${a.title} ${category}`.slice(0, 80)
+    // Use the first 6 words of the title as Unsplash search keywords for relevance
+    const keywords = cleanContent(a.title).split(' ').slice(0, 6).join(' ')
     const imageUrl = await resolveUniqueImageUrl(a.imageUrl, a.externalId, keywords)
 
     await prisma.fetchedArticle.create({
