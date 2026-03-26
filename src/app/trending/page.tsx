@@ -1,13 +1,42 @@
 import { Metadata } from 'next'
-import { getTrendingArticles, getAllArticles } from '@/lib/newsData'
+import { prisma } from '@/lib/db'
+import { Article } from '@/types'
 import { ArticleCard } from '@/components/ArticleCard'
 import { TrendingUp, Flame } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Trending Good News' }
 
-export default function TrendingPage() {
-  const trending = getTrendingArticles()
-  const allArticles = getAllArticles()
+function dbToArticle(a: any): Article {
+  return {
+    id: `live-${a.id}`,
+    title: a.title,
+    summary: a.summary,
+    content: a.content,
+    sourceUrl: a.sourceUrl,
+    sourceName: a.sourceName,
+    region: a.region,
+    country: a.country,
+    category: a.category,
+    tags: JSON.parse(a.tags || '[]'),
+    publishedAt: a.publishedAt.toISOString(),
+    imageUrl: a.imageUrl || `https://picsum.photos/seed/${a.id}/800/450`,
+    positivityScore: a.positivityScore,
+    trending: a.trending,
+    featured: a.featured,
+    readTime: a.readTime,
+  }
+}
+
+export default async function TrendingPage() {
+  const threeMonthsAgo = new Date()
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+  const rows = await prisma.fetchedArticle.findMany({
+    where: { publishedAt: { gte: threeMonthsAgo } },
+    orderBy: { publishedAt: 'desc' },
+    take: 100,
+  })
+  const allArticles = rows.map(dbToArticle)
+  const trending = allArticles.filter(a => a.trending).slice(0, 20)
   const highScore = allArticles
     .filter(a => !a.trending)
     .sort((a, b) => b.positivityScore - a.positivityScore)

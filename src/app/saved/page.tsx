@@ -6,13 +6,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { BookmarkCheck, Sparkles, Trash2 } from 'lucide-react'
 import { ArticleCard } from '@/components/ArticleCard'
-import { getArticlesByIds } from '@/lib/newsData'
 import { Article } from '@/types'
 
 export default function SavedPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [savedIds, setSavedIds] = useState<string[]>([])
+  const [savedArticles, setSavedArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -25,8 +25,13 @@ export default function SavedPage() {
     if (session) {
       fetch('/api/saved')
         .then(r => r.json())
-        .then(ids => {
-          setSavedIds(Array.isArray(ids) ? ids : [])
+        .then(async (ids: string[]) => {
+          const validIds = Array.isArray(ids) ? ids : []
+          setSavedIds(validIds)
+          if (validIds.length > 0) {
+            const arts = await fetch(`/api/news?ids=${validIds.join(',')}`).then(r => r.json())
+            setSavedArticles(Array.isArray(arts) ? arts : [])
+          }
           setLoading(false)
         })
         .catch(() => setLoading(false))
@@ -41,7 +46,11 @@ export default function SavedPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ articleId }),
     })
-    setSavedIds(prev => isSaved ? prev.filter(id => id !== articleId) : [...prev, articleId])
+    setSavedIds(prev => {
+      const next = isSaved ? prev.filter(id => id !== articleId) : [...prev, articleId]
+      return next
+    })
+    setSavedArticles(prev => isSaved ? prev.filter(a => a.id !== articleId) : prev)
   }
 
   const handleClearAll = async () => {
@@ -56,6 +65,7 @@ export default function SavedPage() {
       )
     )
     setSavedIds([])
+    setSavedArticles([])
   }
 
   if (status === 'loading' || loading) {
@@ -66,8 +76,6 @@ export default function SavedPage() {
       </div>
     )
   }
-
-  const savedArticles = getArticlesByIds(savedIds)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

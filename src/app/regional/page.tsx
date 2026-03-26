@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { MapPin, Loader2, LocateFixed, AlertCircle } from 'lucide-react'
 import { ArticleCard } from '@/components/ArticleCard'
-import { getArticlesByRegion } from '@/lib/newsData'
 import { REGIONS, REGION_COLORS, Article } from '@/types'
 
 const REGION_EMOJIS: Record<string, string> = {
@@ -21,6 +20,8 @@ type LocationStatus = 'idle' | 'detecting' | 'found' | 'denied' | 'error' | 'una
 
 export default function RegionalPage() {
   const [selectedRegion, setSelectedRegion] = useState<string>('All')
+  const [articles, setArticles] = useState<Article[]>([])
+  const [regionCounts, setRegionCounts] = useState<Record<string, number>>({})
 
   // Geolocation + local news state
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle')
@@ -69,9 +70,21 @@ export default function RegionalPage() {
     )
   }, [])
 
-  const articles = selectedRegion === 'All'
-    ? REGIONS.flatMap(r => getArticlesByRegion(r)).filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
-    : getArticlesByRegion(selectedRegion)
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (selectedRegion !== 'All') params.set('region', selectedRegion)
+    fetch(`/api/news?${params.toString()}`)
+      .then(r => r.json())
+      .then((data: Article[]) => {
+        setArticles(data)
+        if (selectedRegion === 'All') {
+          const counts: Record<string, number> = {}
+          REGIONS.forEach(r => { counts[r] = data.filter(a => a.region === r).length })
+          setRegionCounts(counts)
+        }
+      })
+      .catch(() => {})
+  }, [selectedRegion])
 
   const locationLabel = [userCity, userState].filter(Boolean).join(', ')
 
@@ -173,7 +186,7 @@ export default function RegionalPage() {
           >
             <span className="text-2xl">{REGION_EMOJIS[region] ?? '🌍'}</span>
             <span className="text-xs font-semibold leading-tight">{region}</span>
-            <span className="text-xs text-gray-400">{getArticlesByRegion(region).length}</span>
+            <span className="text-xs text-gray-400">{regionCounts[region] ?? ''}</span>
           </button>
         ))}
       </div>

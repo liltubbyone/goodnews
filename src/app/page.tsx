@@ -7,7 +7,6 @@ import { Sparkles, TrendingUp, Globe, ArrowRight, Zap } from 'lucide-react'
 import { HeroSection } from '@/components/HeroSection'
 import { ArticleCard } from '@/components/ArticleCard'
 import { FilterBar } from '@/components/FilterBar'
-import { getFeaturedArticles, getTrendingArticles, getAllArticles, getArticlesByRegion, getArticlesByCategory, searchArticles } from '@/lib/newsData'
 import { Article, CATEGORIES, CATEGORY_COLORS } from '@/types'
 
 const STATS = [
@@ -22,13 +21,24 @@ export default function HomePage() {
   const [savedIds, setSavedIds] = useState<string[]>([])
   const [selectedRegion, setSelectedRegion] = useState('All')
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [featuredArticles, setFeaturedArticles] = useState<Article[]>([])
+  const [trendingArticles, setTrendingArticles] = useState<Article[]>([])
+  const [filteredArticles, setFilteredArticles] = useState<Article[]>([])
 
-  const featuredArticles = getFeaturedArticles()
-  const trendingArticles = getTrendingArticles()
   const featuredHero = featuredArticles[0]
   const heroSide = featuredArticles.slice(1, 4)
 
-  const filteredArticles = searchArticles('', selectedRegion, selectedCategory)
+  useEffect(() => {
+    fetch('/api/news?type=featured').then(r => r.json()).then(setFeaturedArticles).catch(() => {})
+    fetch('/api/news?type=trending').then(r => r.json()).then(setTrendingArticles).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (selectedRegion !== 'All') params.set('region', selectedRegion)
+    if (selectedCategory !== 'All') params.set('category', selectedCategory)
+    fetch(`/api/news?${params.toString()}`).then(r => r.json()).then(setFilteredArticles).catch(() => {})
+  }, [selectedRegion, selectedCategory])
 
   useEffect(() => {
     if (session) {

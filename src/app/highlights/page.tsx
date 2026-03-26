@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
-import { getFeaturedArticles, getAllArticles } from '@/lib/newsData'
+import { prisma } from '@/lib/db'
+import { Article } from '@/types'
 import { ArticleHeroImage } from '@/components/ArticleHeroImage'
 import { extractKeyPoints } from '@/lib/articleUtils'
 import { Globe, Star, CheckCircle2, Lightbulb } from 'lucide-react'
@@ -9,9 +10,37 @@ import { CATEGORY_COLORS, REGION_COLORS } from '@/types'
 
 export const metadata: Metadata = { title: 'Global Highlights' }
 
-export default function HighlightsPage() {
-  const featured = getFeaturedArticles()
-  const allArticles = getAllArticles()
+function dbToArticle(a: any): Article {
+  return {
+    id: `live-${a.id}`,
+    title: a.title,
+    summary: a.summary,
+    content: a.content,
+    sourceUrl: a.sourceUrl,
+    sourceName: a.sourceName,
+    region: a.region,
+    country: a.country,
+    category: a.category,
+    tags: JSON.parse(a.tags || '[]'),
+    publishedAt: a.publishedAt.toISOString(),
+    imageUrl: a.imageUrl || `https://picsum.photos/seed/${a.id}/800/450`,
+    positivityScore: a.positivityScore,
+    trending: a.trending,
+    featured: a.featured,
+    readTime: a.readTime,
+  }
+}
+
+export default async function HighlightsPage() {
+  const threeMonthsAgo = new Date()
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+  const rows = await prisma.fetchedArticle.findMany({
+    where: { publishedAt: { gte: threeMonthsAgo } },
+    orderBy: { publishedAt: 'desc' },
+    take: 100,
+  })
+  const allArticles = rows.map(dbToArticle)
+  const featured = allArticles.filter(a => a.featured).slice(0, 4)
   const topStory = featured[0]
   const restFeatured = featured.slice(1)
   const moreStories = allArticles.filter(a => !a.featured).slice(0, 12)

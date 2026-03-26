@@ -5,8 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { ArticleCard } from '@/components/ArticleCard'
-import { searchArticles } from '@/lib/newsData'
-import { REGIONS, CATEGORIES } from '@/types'
+import { Article, REGIONS, CATEGORIES } from '@/types'
 
 function SearchContent() {
   const searchParams = useSearchParams()
@@ -18,6 +17,7 @@ function SearchContent() {
   const [category, setCategory] = useState(searchParams.get('category') ?? 'All')
   const [savedIds, setSavedIds] = useState<string[]>([])
   const [showFilters, setShowFilters] = useState(false)
+  const [results, setResults] = useState<Article[]>([])
 
   useEffect(() => {
     if (session) {
@@ -25,7 +25,16 @@ function SearchContent() {
     }
   }, [session])
 
-  const results = searchArticles(query, region, category)
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (query) params.set('q', query)
+    if (region !== 'All') params.set('region', region)
+    if (category !== 'All') params.set('category', category)
+    fetch(`/api/news?${params.toString()}`)
+      .then(r => r.json())
+      .then(setResults)
+      .catch(() => {})
+  }, [query, region, category])
 
   const updateUrl = useCallback((q: string, r: string, c: string) => {
     const params = new URLSearchParams()

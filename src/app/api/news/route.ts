@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllArticles } from '@/lib/newsData'
 import { prisma } from '@/lib/db'
 import { Article } from '@/types'
 
@@ -51,6 +50,14 @@ export async function GET(req: NextRequest) {
   const region = searchParams.get('region') ?? 'All'
   const category = searchParams.get('category') ?? 'All'
   const type = searchParams.get('type')
+  const idsParam = searchParams.get('ids')
+
+  // Batch lookup by IDs (for saved page)
+  if (idsParam) {
+    const dbIds = idsParam.split(',').map(id => id.trim().replace(/^live-/, '')).filter(Boolean)
+    const rows = await prisma.fetchedArticle.findMany({ where: { id: { in: dbIds } } })
+    return NextResponse.json(rows.map(dbToArticle))
+  }
 
   // Only return articles published in the last 3 months
   const threeMonthsAgo = new Date()
@@ -62,22 +69,16 @@ export async function GET(req: NextRequest) {
     orderBy: { publishedAt: 'desc' },
     take: 100,
   })
-  const liveArticles = dbRows.map(dbToArticle)
-
-  // Static curated articles as fallback / supplement
-  const staticArticles = getAllArticles()
-
-  // Live articles first, then static (live IDs won't conflict since prefixed with 'live-')
-  const all = [...liveArticles, ...staticArticles]
+  const articles = dbRows.map(dbToArticle)
 
   if (type === 'trending') {
-    return NextResponse.json(all.filter(a => a.trending).slice(0, 12))
+    return NextResponse.json(articles.filter(a => a.trending).slice(0, 12))
   }
 
   if (type === 'featured') {
-    return NextResponse.json(all.filter(a => a.featured).slice(0, 6))
+    return NextResponse.json(articles.filter(a => a.featured).slice(0, 6))
   }
 
-  const filtered = all.filter(a => matchesFilters(a, query, region, category))
+  const filtered = articles.filter(a => matchesFilters(a, query, region, category))
   return NextResponse.json(filtered)
 }

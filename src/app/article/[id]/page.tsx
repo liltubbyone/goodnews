@@ -5,7 +5,6 @@ import { format } from 'date-fns'
 import { Clock, ExternalLink, ArrowLeft, Globe, Tag, CheckCircle2, Lightbulb, BookOpen } from 'lucide-react'
 import fs from 'fs'
 import path from 'path'
-import { getArticleById, getRelatedArticles } from '@/lib/newsData'
 import { fetchUnsplashPhoto } from '@/lib/photoSearch'
 import { extractKeyPoints, cleanContent } from '@/lib/articleUtils'
 import { prisma } from '@/lib/db'
@@ -75,10 +74,8 @@ async function resolveArticle(id: string): Promise<Article | undefined> {
       }
     } catch {}
 
-    // DB lookup missed — fall through to in-memory lookup
   }
-  // Covers static defaultArticles AND JSON-loaded fetchedArticles
-  return getArticleById(id)
+  return undefined
 }
 
 
@@ -125,7 +122,33 @@ export default async function ArticlePage({ params }: Props) {
     if (photo) article.imageUrl = photo
   }
 
-  const related = getRelatedArticles(article)
+  const relatedRows = await prisma.fetchedArticle.findMany({
+    where: {
+      id: { not: article.id.replace(/^live-/, '') },
+      OR: [{ category: article.category }, { region: article.region }],
+      publishedAt: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) },
+    },
+    take: 3,
+    orderBy: { publishedAt: 'desc' },
+  })
+  const related: Article[] = relatedRows.map(r => ({
+    id: `live-${r.id}`,
+    title: r.title,
+    summary: r.summary,
+    content: r.content,
+    sourceUrl: r.sourceUrl,
+    sourceName: r.sourceName,
+    region: r.region,
+    country: r.country,
+    category: r.category,
+    tags: JSON.parse(r.tags || '[]'),
+    publishedAt: r.publishedAt.toISOString(),
+    imageUrl: r.imageUrl || `https://picsum.photos/seed/${r.id}/800/450`,
+    positivityScore: r.positivityScore,
+    trending: r.trending,
+    featured: r.featured,
+    readTime: r.readTime,
+  }))
   const formattedDate = format(new Date(article.publishedAt), 'MMMM d, yyyy')
   const keyPoints = extractKeyPoints(article.title, article.summary, article.content)
   const paragraphs = buildParagraphs(article.content, article.summary)
