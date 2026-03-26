@@ -139,19 +139,24 @@ export default async function HighlightsPage() {
             {restFeatured.map(article => (
                 <div key={article.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
                   {/* Image */}
-                  <Link href={`/article/${article.id}`} className="group relative h-44 block flex-shrink-0">
-                    <ArticleHeroImage
-                      src={article.imageUrl}
-                      alt={article.title}
-                      category={article.category}
-                      tags={article.tags}
-                      title={article.title}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    <div className="absolute bottom-3 left-3 flex gap-1.5">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[article.category] ?? ''}`}>{article.category}</span>
+                  <div className="relative">
+                    <Link href={`/article/${article.id}`} className="group relative h-44 block flex-shrink-0">
+                      <ArticleHeroImage
+                        src={article.imageUrl}
+                        alt={article.title}
+                        category={article.category}
+                        tags={article.tags}
+                        title={article.title}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                      <div className="absolute bottom-3 left-3 flex gap-1.5">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[article.category] ?? ''}`}>{article.category}</span>
+                      </div>
+                    </Link>
+                    <div className="absolute top-3 right-3 bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow">
+                      {article.positivityScore}% positive
                     </div>
-                  </Link>
+                  </div>
 
                   {/* Content */}
                   <div className="p-4 flex flex-col flex-1">
@@ -164,9 +169,8 @@ export default async function HighlightsPage() {
                     {/* Summary */}
                     <p className="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-3">{article.summary}</p>
 
-                    <div className="mt-auto pt-2 flex items-center justify-between gap-2">
-                      <span className="text-xs text-gray-400">{article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
-                      <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full whitespace-nowrap">{article.positivityScore}% ✦</span>
+                    <div className="mt-auto pt-2 text-xs text-gray-400">
+                      {article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
                     </div>
                   </div>
                 </div>
@@ -182,19 +186,24 @@ export default async function HighlightsPage() {
           {moreStories.map(article => (
               <div key={article.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
                 {/* Image */}
-                <Link href={`/article/${article.id}`} className="group relative h-40 block flex-shrink-0">
-                  <ArticleHeroImage
-                    src={article.imageUrl}
-                    alt={article.title}
-                    category={article.category}
-                    tags={article.tags}
-                    title={article.title}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  <div className="absolute bottom-3 left-3 flex gap-1.5">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[article.category] ?? ''}`}>{article.category}</span>
+                <div className="relative">
+                  <Link href={`/article/${article.id}`} className="group relative h-40 block flex-shrink-0">
+                    <ArticleHeroImage
+                      src={article.imageUrl}
+                      alt={article.title}
+                      category={article.category}
+                      tags={article.tags}
+                      title={article.title}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <div className="absolute bottom-3 left-3 flex gap-1.5">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[article.category] ?? ''}`}>{article.category}</span>
+                    </div>
+                  </Link>
+                  <div className="absolute top-3 right-3 bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow">
+                    {article.positivityScore}% positive
                   </div>
-                </Link>
+                </div>
 
                 {/* Content */}
                 <div className="p-4 flex flex-col flex-1">
@@ -207,9 +216,8 @@ export default async function HighlightsPage() {
                   {/* Summary */}
                   <p className="text-gray-500 text-sm leading-relaxed line-clamp-2 mb-3">{article.summary}</p>
 
-                  <div className="mt-auto pt-2 flex items-center justify-between gap-2">
-                    <span className="text-xs text-gray-400">{article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}</span>
-                    <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full whitespace-nowrap">{article.positivityScore}% ✦</span>
+                  <div className="mt-auto pt-2 text-xs text-gray-400">
+                    {article.sourceName} · {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
                   </div>
                 </div>
               </div>
