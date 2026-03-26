@@ -8,113 +8,17 @@ on:
 jobs:
   fetch_articles:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Fetch articles from multiple categories
+      - name: Trigger Vercel article refresh
         run: |
-          API_KEY="pub_eae24b22627b43a28d515ea2dc1f33e1"
-          BASE="https://newsdata.io/api/1/news?apikey=${API_KEY}&language=en"
-
-          curl -s "${BASE}&category=science&q=breakthrough+discovery+innovation"     -o /tmp/cat1.json
-          sleep 2
-          curl -s "${BASE}&category=health&q=cure+recovery+success+treatment"        -o /tmp/cat2.json
-          sleep 2
-          curl -s "${BASE}&category=environment&q=conservation+renewable+restored"   -o /tmp/cat3.json
-          sleep 2
-          curl -s "${BASE}&category=technology&q=innovation+achievement+milestone"   -o /tmp/cat4.json
-          sleep 2
-          curl -s "${BASE}&category=world&q=humanitarian+volunteers+charity"         -o /tmp/cat5.json
-
-      - name: Combine, filter, deduplicate, fetch photos → top 50
-        env:
-          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
-        run: |
-          python3 << 'PYEOF'
-          import json, sys, os, urllib.request, urllib.parse, time
-          from datetime import datetime, timedelta
-
-          UNSPLASH_KEY = os.environ.get('UNSPLASH_ACCESS_KEY', '')
-
-          def fetch_photo(query):
-              """Return an Unsplash image URL for the given query, or None."""
-              if not UNSPLASH_KEY:
-                  return None
-              try:
-                  q = urllib.parse.quote(query)
-                  url = f"https://api.unsplash.com/search/photos?query={q}&per_page=1&orientation=landscape&client_id={UNSPLASH_KEY}"
-                  with urllib.request.urlopen(url, timeout=8) as r:
-                      data = json.loads(r.read())
-                  results = data.get('results', [])
-                  if results:
-                      raw = results[0]['urls']['raw']
-                      return f"{raw}&w=800&h=450&fit=crop&auto=format"
-              except Exception as e:
-                  print(f'  Unsplash error for "{query}": {e}', file=sys.stderr)
-              return None
-
-          cutoff = datetime.utcnow() - timedelta(days=180)
-          seen_ids = set()
-          articles = []
-
-          for i in range(1, 6):
-              try:
-                  with open(f'/tmp/cat{i}.json') as f:
-                      data = json.load(f)
-                  if data.get('status') != 'success':
-                      continue
-                  for a in data.get('results', []):
-                      aid = a.get('article_id', '')
-                      if not aid or not a.get('title') or not a.get('link'):
-                          continue
-                      if aid in seen_ids:
-                          continue
-                      pub = a.get('pubDate', '')
-                      if pub:
-                          try:
-                              pub_dt = datetime.strptime(pub[:10], '%Y-%m-%d')
-                              if pub_dt < cutoff:
-                                  continue
-                          except Exception:
-                              pass
-                      seen_ids.add(aid)
-                      articles.append(a)
-              except Exception as e:
-                  print(f'Error reading cat{i}.json: {e}', file=sys.stderr)
-
-          top = articles[:50]
-
-          # Fetch a real photo for any article that doesn't already have one
-          for a in top:
-              if not a.get('image_url'):
-                  keywords = a.get('keywords') or []
-                  title = a.get('title', '')
-                  query = ' '.join(keywords[:2]) if keywords else ' '.join(title.split()[:5])
-                  photo = fetch_photo(query)
-                  if photo:
-                      a['image_url'] = photo
-                      print(f'  Photo fetched for: {title[:60]}')
-                  time.sleep(0.4)  # stay well under 50 req/hour rate limit
-
-          output = {
-              'status': 'success',
-              'totalResults': len(top),
-              'results': top,
-          }
-          with open('public/articles.json', 'w') as f:
-              json.dump(output, f)
-          print(f'Saved {len(top)} articles to public/articles.json')
-          PYEOF
-
-      - name: Commit and push
-        run: |
-          git config --local user.email 'github-actions@github.com'
-          git config --local user.name 'GitHub Actions'
-          git add public/articles.json
-          git diff --quiet && git diff --staged --quiet || \
-            (git commit -m 'chore: daily article refresh' && git push origin main)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://goodnews-phi.vercel.app/api/cron/refresh?force=1")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          echo "Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Cron refresh failed with status $HTTP_CODE"
+            exit 1
+          fi
