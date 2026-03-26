@@ -37,7 +37,7 @@ export default async function TrendingPage() {
     take: 100,
   })
   let allArticles = rows.map(dbToArticle)
-  const trending = allArticles.filter(a => a.trending).slice(0, 20)
+  const trending = allArticles.filter(a => a.trending).slice(0, 10)
   const highScore = allArticles
     .filter(a => !a.trending)
     .sort((a, b) => b.positivityScore - a.positivityScore)

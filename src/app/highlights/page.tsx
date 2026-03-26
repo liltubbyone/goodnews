@@ -44,7 +44,7 @@ export default async function HighlightsPage() {
   const featured = allArticles.filter(a => a.featured).slice(0, 4)
   const topStory = featured[0]
   const restFeatured = featured.slice(1)
-  const moreStories = allArticles.filter(a => !a.featured).slice(0, 12)
+  const moreStories = allArticles.filter(a => !a.featured).slice(0, 20)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -76,7 +76,7 @@ export default async function HighlightsPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute top-5 left-5">
                 <span className="flex items-center gap-1.5 bg-brand-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow whitespace-nowrap">
-                  <Star className="w-3 h-3 fill-white flex-shrink-0" /> Top Pick
+                  <Star className="w-3 h-3 fill-white flex-shrink-0" /> Editor&apos;s Top Pick
                 </span>
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -93,7 +93,7 @@ export default async function HighlightsPage() {
               {/* Summary */}
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Summary</p>
-                <p className="text-gray-700 leading-relaxed">{topStory.summary}</p>
+                <p className="text-gray-700 leading-relaxed line-clamp-3">{topStory.summary}</p>
                 <div className="mt-4 text-xs text-gray-400">
                   {topStory.sourceName} · {formatDistanceToNow(new Date(topStory.publishedAt), { addSuffix: true })}
                 </div>
