@@ -59,15 +59,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows.map(dbToArticle))
   }
 
-  // Only return articles published in the last 3 months
-  const threeMonthsAgo = new Date()
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
-
-  // Fetch live articles from DB (most recent 100, within 3-month window)
+  // Fetch top 50 articles from DB ordered by positivity score
   const dbRows = await prisma.fetchedArticle.findMany({
-    where: { publishedAt: { gte: threeMonthsAgo } },
     orderBy: [{ positivityScore: 'desc' }, { publishedAt: 'desc' }],
-    take: 100,
+    take: 50,
   })
   // Deduplicate by title in case the DB has pre-existing duplicates
   const seenTitles = new Set<string>()

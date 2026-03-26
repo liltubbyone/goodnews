@@ -381,14 +381,15 @@ export async function fetchAllSources(): Promise<{
   }
 }
 
-// Remove articles older than 3 months from the database
+// Remove articles older than 48 hours from the database so each daily
+// run replaces yesterday's batch with a fresh one.
 export async function cleanupOldArticles(): Promise<number> {
-  const cutoff = threeMonthsAgo()
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000)
   const result = await prisma.fetchedArticle.deleteMany({
     where: { publishedAt: { lt: cutoff } },
   })
   if (result.count > 0) {
-    console.log(`[GoodNews] Cleaned up ${result.count} articles older than 3 months`)
+    console.log(`[GoodNews] Cleaned up ${result.count} articles older than 48 hours`)
   }
   return result.count
 }
