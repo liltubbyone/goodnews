@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useState } from 'react'
-import { Menu, X, Sparkles, BookmarkCheck, LogOut, User } from 'lucide-react'
+import { Menu, X, Sparkles, BookmarkCheck, LogOut, Shield } from 'lucide-react'
 
 export function Navbar() {
   const { data: session } = useSession()
@@ -65,6 +65,19 @@ export function Navbar() {
                       <BookmarkCheck className="w-4 h-4" />
                       Saved Stories
                     </Link>
+                    {session.user?.email === 'dre.hathaway@gmail.com' && (
+                      <>
+                        <hr className="my-1 border-gray-100" />
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-700 hover:bg-indigo-50 transition-colors font-semibold"
+                        >
+                          <Shield className="w-4 h-4" />
+                          Admin Dashboard
+                        </Link>
+                      </>
+                    )}
                     <hr className="my-1 border-gray-100" />
                     <button
                       onClick={() => { signOut({ callbackUrl: '/' }); setUserMenuOpen(false) }}
@@ -122,6 +135,15 @@ export function Navbar() {
               >
                 <BookmarkCheck className="w-4 h-4" /> Saved Stories
               </Link>
+              {session.user?.email === 'dre.hathaway@gmail.com' && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-indigo-700 hover:bg-indigo-50 rounded-lg font-semibold"
+                >
+                  <Shield className="w-4 h-4" /> Admin Dashboard
+                </Link>
+              )}
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
                 className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg"

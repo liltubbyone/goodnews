@@ -36,6 +36,14 @@ model UserPreference {
   user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model ActiveSession {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  userId    String?
+  lastSeen  DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
 model ArticleSubmission {
   id          String   @id @default(cuid())
   authorName  String
