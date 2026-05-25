@@ -87,16 +87,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(articles.filter(a => a.featured).slice(0, 6), noCache)
   }
 
-  // Return distinct categories that have at least one article published today
+  // Return distinct categories that have at least one article in the last 49 hours,
+  // falling back to any category present in the full DB if the recent window is sparse.
   if (type === 'active-categories') {
-    const todayCutoff = new Date()
-    todayCutoff.setHours(0, 0, 0, 0)
-    const rows = await prisma.fetchedArticle.findMany({
-      where: { publishedAt: { gte: todayCutoff } },
+    const recentCutoff = new Date(Date.now() - 49 * 60 * 60 * 1000)
+    const recentRows = await prisma.fetchedArticle.findMany({
+      where: { publishedAt: { gte: recentCutoff } },
       select: { category: true },
       distinct: ['category'],
     })
-    return NextResponse.json(rows.map(r => r.category), noCache)
+    const recentCategories = recentRows.map(r => r.category)
+    // If recent window covers all 8 categories, return it directly
+    if (recentCategories.length >= 8) {
+      return NextResponse.json(recentCategories, noCache)
+    }
+    // Otherwise also include categories that exist anywhere in the DB
+    const allRows = await prisma.fetchedArticle.findMany({
+      select: { category: true },
+      distinct: ['category'],
+    })
+    const allCategories = [...new Set([...recentCategories, ...allRows.map(r => r.category)])]
+    return NextResponse.json(allCategories, noCache)
   }
 
   const filtered = articles.filter(a => matchesFilters(a, query, region, category))
