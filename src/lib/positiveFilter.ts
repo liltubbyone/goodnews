@@ -1,17 +1,36 @@
 // Keywords that boost an article's positivity score
 const POSITIVE_KEYWORDS = [
-  'breakthrough', 'discovery', 'hope', 'success', 'achievement', 'saved',
-  'restored', 'helping', 'volunteers', 'innovation', 'cure', 'progress',
-  'milestone', 'record', 'award', 'growth', 'improved', 'thriving',
-  'celebrates', 'historic', 'pioneering', 'inspiring', 'wonderful',
-  'extraordinary', 'transforms', 'heals', 'protects', 'rescues', 'builds',
-  'creates', 'connects', 'renewable', 'sustainable', 'clean energy',
-  'conservation', 'charity', 'donates', 'education', 'empowers',
-  'first ever', 'record-breaking', 'life-saving', 'groundbreaking',
-  'historic win', 'free', 'grants', 'revived', 'recovered', 'thrives',
-  'flourishing', 'booming', 'expanding', 'launched', 'opens', 'reaches',
-  'exceeds', 'surpasses', 'celebrated', 'honored', 'awarded', 'recognized',
-  'eradicated', 'eliminated', 'solved', 'fixed', 'resolved', 'healed',
+  // Achievements & milestones
+  'breakthrough', 'discovery', 'milestone', 'record', 'record-breaking', 'record breaking',
+  'first ever', 'first time', 'historic', 'historic win', 'pioneering', 'groundbreaking',
+  'achievement', 'accomplished', 'success', 'successful', 'succeeds', 'surpasses', 'exceeds',
+  'awarded', 'award', 'honored', 'recognized', 'celebrated', 'celebrates', 'prize',
+  'champion', 'championship', 'gold medal', 'trophy',
+  // Hope & progress
+  'hope', 'hopeful', 'inspiring', 'inspiration', 'uplifting', 'positive change',
+  'progress', 'progress made', 'advancement', 'forward', 'improvement', 'improved',
+  'thriving', 'thrives', 'flourishing', 'booming', 'expanding', 'growing',
+  'momentum', 'turning point', 'good news',
+  // Helping & community
+  'volunteers', 'volunteering', 'helping', 'helps', 'helped', 'support', 'supported',
+  'charity', 'donates', 'donation', 'fundraising', 'empowers', 'empowerment',
+  'community', 'neighbors', 'together', 'united', 'collaboration', 'partnership',
+  'kindness', 'compassion', 'generosity', 'giving back',
+  // Healing & health victories
+  'saved', 'saves', 'rescues', 'rescued', 'recovery', 'recovered', 'recovering',
+  'cure', 'cured', 'heals', 'healed', 'treatment success', 'remission', 'survived',
+  'life-saving', 'lifesaving', 'life saving', 'restored', 'revived', 'rehabilitated',
+  'vaccine approved', 'therapy approved', 'approved treatment',
+  // Innovation & science wins
+  'innovation', 'innovates', 'invention', 'invented', 'discovers', 'breakthrough study',
+  'new technology', 'clean energy', 'renewable', 'sustainable', 'solar powered',
+  'conservation', 'protected', 'species saved', 'habitat restored', 'rewilding',
+  'carbon neutral', 'zero emissions', 'green energy',
+  // Social good
+  'eradicated', 'eliminated', 'solved', 'fixed', 'resolved', 'free of charge',
+  'grants', 'scholarships', 'opens doors', 'launches', 'launched', 'opens',
+  'reaches', 'builds', 'creates', 'connects', 'extraordinary', 'transforms',
+  'wonderful', 'remarkable', 'unprecedented success',
 ]
 
 // Any of these words in title/summary → article is disqualified (score = 0)
@@ -32,15 +51,15 @@ export function scorePositivity(title: string, summary: string): number {
     if (text.includes(neg)) return 0
   }
 
-  let score = 50
+  let score = 40
   for (const pos of POSITIVE_KEYWORDS) {
-    if (text.includes(pos)) score += 6
+    if (text.includes(pos)) score += 8
   }
 
   return Math.min(100, score)
 }
 
-export function isPositive(title: string, summary: string, threshold = 50): boolean {
+export function isPositive(title: string, summary: string, threshold = 60): boolean {
   return scorePositivity(title, summary) >= threshold
 }
 
@@ -56,14 +75,112 @@ export function categorizeArticle(title: string, summary: string): string {
   return 'Community'
 }
 
+// Country name mappings for specific detection
+const COUNTRY_PATTERNS: Array<{ pattern: RegExp; region: string; country: string }> = [
+  // Oceania
+  { pattern: /\baustralian?\b/, region: 'Oceania', country: 'Australia' },
+  { pattern: /\bnew zealand\b/, region: 'Oceania', country: 'New Zealand' },
+  { pattern: /\bfiji\b/, region: 'Oceania', country: 'Fiji' },
+  { pattern: /\bsamoa\b/, region: 'Oceania', country: 'Samoa' },
+  { pattern: /\bpapua\b/, region: 'Oceania', country: 'Papua New Guinea' },
+  { pattern: /\boceania\b/, region: 'Oceania', country: 'Oceania' },
+  // Africa
+  { pattern: /\bsouth africa\b/, region: 'Africa', country: 'South Africa' },
+  { pattern: /\bkenya(n)?\b/, region: 'Africa', country: 'Kenya' },
+  { pattern: /\bnigeria(n)?\b/, region: 'Africa', country: 'Nigeria' },
+  { pattern: /\bghana(ian)?\b/, region: 'Africa', country: 'Ghana' },
+  { pattern: /\bethiopia(n)?\b/, region: 'Africa', country: 'Ethiopia' },
+  { pattern: /\btanzania(n)?\b/, region: 'Africa', country: 'Tanzania' },
+  { pattern: /\buganda(n)?\b/, region: 'Africa', country: 'Uganda' },
+  { pattern: /\brwanda(n)?\b/, region: 'Africa', country: 'Rwanda' },
+  { pattern: /\bsenegal(ese)?\b/, region: 'Africa', country: 'Senegal' },
+  { pattern: /\bmali(an)?\b/, region: 'Africa', country: 'Mali' },
+  { pattern: /\bzambia(n)?\b/, region: 'Africa', country: 'Zambia' },
+  { pattern: /\bmorocco|moroccan\b/, region: 'Africa', country: 'Morocco' },
+  { pattern: /\begypt(ian)?\b/, region: 'Africa', country: 'Egypt' },
+  { pattern: /\bcameroon\b/, region: 'Africa', country: 'Cameroon' },
+  { pattern: /\bafrica(n)?\b/, region: 'Africa', country: 'Africa' },
+  // Asia
+  { pattern: /\bjapan(ese)?\b/, region: 'Asia', country: 'Japan' },
+  { pattern: /\bchina|chinese\b/, region: 'Asia', country: 'China' },
+  { pattern: /\bindia(n)?\b/, region: 'Asia', country: 'India' },
+  { pattern: /\bsouth korea(n)?|korean\b/, region: 'Asia', country: 'South Korea' },
+  { pattern: /\bkorea(n)?\b/, region: 'Asia', country: 'South Korea' },
+  { pattern: /\bbangladesh(i)?\b/, region: 'Asia', country: 'Bangladesh' },
+  { pattern: /\bvietnam(ese)?\b/, region: 'Asia', country: 'Vietnam' },
+  { pattern: /\bindonesia(n)?\b/, region: 'Asia', country: 'Indonesia' },
+  { pattern: /\bthailand|thai\b/, region: 'Asia', country: 'Thailand' },
+  { pattern: /\bmalaysia(n)?\b/, region: 'Asia', country: 'Malaysia' },
+  { pattern: /\bsingapore(an)?\b/, region: 'Asia', country: 'Singapore' },
+  { pattern: /\bpakistan(i)?\b/, region: 'Asia', country: 'Pakistan' },
+  { pattern: /\bphilippines|filipino\b/, region: 'Asia', country: 'Philippines' },
+  { pattern: /\basia(n)?\b/, region: 'Asia', country: 'Asia' },
+  // Europe
+  { pattern: /\bunited kingdom|u\.k\.|uk\b/, region: 'Europe', country: 'United Kingdom' },
+  { pattern: /\bbritain|british\b/, region: 'Europe', country: 'United Kingdom' },
+  { pattern: /\bfrance|french\b/, region: 'Europe', country: 'France' },
+  { pattern: /\bgermany|german\b/, region: 'Europe', country: 'Germany' },
+  { pattern: /\bspain|spanish\b/, region: 'Europe', country: 'Spain' },
+  { pattern: /\bitaly|italian\b/, region: 'Europe', country: 'Italy' },
+  { pattern: /\bnetherlands|dutch\b/, region: 'Europe', country: 'Netherlands' },
+  { pattern: /\bsweden|swedish\b/, region: 'Europe', country: 'Sweden' },
+  { pattern: /\bnorway|norwegian\b/, region: 'Europe', country: 'Norway' },
+  { pattern: /\bdenmark|danish\b/, region: 'Europe', country: 'Denmark' },
+  { pattern: /\bportugal|portuguese\b/, region: 'Europe', country: 'Portugal' },
+  { pattern: /\baustria(n)?\b/, region: 'Europe', country: 'Austria' },
+  { pattern: /\bswitzerland|swiss\b/, region: 'Europe', country: 'Switzerland' },
+  { pattern: /\bbelgium|belgian\b/, region: 'Europe', country: 'Belgium' },
+  { pattern: /\bireland|irish\b/, region: 'Europe', country: 'Ireland' },
+  { pattern: /\bpoland|polish\b/, region: 'Europe', country: 'Poland' },
+  { pattern: /\bfinland|finnish\b/, region: 'Europe', country: 'Finland' },
+  { pattern: /\bgreece|greek\b/, region: 'Europe', country: 'Greece' },
+  { pattern: /\beurope(an)?\b/, region: 'Europe', country: 'Europe' },
+  // Middle East
+  { pattern: /\bisrael(i)?\b/, region: 'Middle East', country: 'Israel' },
+  { pattern: /\bjordan(ian)?\b/, region: 'Middle East', country: 'Jordan' },
+  { pattern: /\bsaudi arabia|saudi\b/, region: 'Middle East', country: 'Saudi Arabia' },
+  { pattern: /\bdubai\b/, region: 'Middle East', country: 'UAE' },
+  { pattern: /\buae|emirates\b/, region: 'Middle East', country: 'UAE' },
+  { pattern: /\biran(ian)?\b/, region: 'Middle East', country: 'Iran' },
+  { pattern: /\biraq(i)?\b/, region: 'Middle East', country: 'Iraq' },
+  { pattern: /\bqatar(i)?\b/, region: 'Middle East', country: 'Qatar' },
+  { pattern: /\bkuwait(i)?\b/, region: 'Middle East', country: 'Kuwait' },
+  { pattern: /\bbahrain(i)?\b/, region: 'Middle East', country: 'Bahrain' },
+  { pattern: /\boman(i)?\b/, region: 'Middle East', country: 'Oman' },
+  { pattern: /\blebanon|lebanese\b/, region: 'Middle East', country: 'Lebanon' },
+  { pattern: /\bturkey|turkish\b/, region: 'Middle East', country: 'Turkey' },
+  { pattern: /\bmiddle east\b/, region: 'Middle East', country: 'Middle East' },
+  // Latin America
+  { pattern: /\bbrazil(ian)?\b/, region: 'Latin America', country: 'Brazil' },
+  { pattern: /\bmexico|mexican\b/, region: 'Latin America', country: 'Mexico' },
+  { pattern: /\bcolombia(n)?\b/, region: 'Latin America', country: 'Colombia' },
+  { pattern: /\bargentina(n)?\b/, region: 'Latin America', country: 'Argentina' },
+  { pattern: /\bchile(an)?\b/, region: 'Latin America', country: 'Chile' },
+  { pattern: /\bperu(vian)?\b/, region: 'Latin America', country: 'Peru' },
+  { pattern: /\becuador(ian)?\b/, region: 'Latin America', country: 'Ecuador' },
+  { pattern: /\bvenezuela(n)?\b/, region: 'Latin America', country: 'Venezuela' },
+  { pattern: /\bcosta rica(n)?\b/, region: 'Latin America', country: 'Costa Rica' },
+  { pattern: /\bpanama(nian)?\b/, region: 'Latin America', country: 'Panama' },
+  { pattern: /\blatin america(n)?\b/, region: 'Latin America', country: 'Latin America' },
+  // North America
+  { pattern: /\bcanada(ian)?\b/, region: 'North America', country: 'Canada' },
+  { pattern: /\bunited states|u\.s\.|usa\b/, region: 'North America', country: 'United States' },
+  { pattern: /\bamerica(n)?\b/, region: 'North America', country: 'United States' },
+  { pattern: /\bcalifornia\b/, region: 'North America', country: 'United States' },
+  { pattern: /\bnew york\b/, region: 'North America', country: 'United States' },
+  { pattern: /\btexas\b/, region: 'North America', country: 'United States' },
+  { pattern: /\bflorida\b/, region: 'North America', country: 'United States' },
+  { pattern: /\bchicago\b/, region: 'North America', country: 'United States' },
+]
+
 export function detectRegion(title: string, summary: string, sourceName: string): { region: string; country: string } {
   const text = `${title} ${summary} ${sourceName}`.toLowerCase()
-  if (/\b(australia|new zealand|pacific islands|papua|fiji|samoa|oceania)\b/.test(text)) return { region: 'Oceania', country: 'Australia' }
-  if (/\b(africa|kenya|nigeria|ghana|ethiopia|tanzania|uganda|rwanda|south africa|senegal|ghana|mali|zambia)\b/.test(text)) return { region: 'Africa', country: 'Africa' }
-  if (/\b(india|china|japan|south korea|korea|asia|bangladesh|vietnam|indonesia|thailand|malaysia|singapore|pakistan)\b/.test(text)) return { region: 'Asia', country: 'Asia' }
-  if (/\b(europe|uk|britain|france|germany|spain|italy|netherlands|sweden|norway|denmark|portugal|austria|switzerland|belgium)\b/.test(text)) return { region: 'Europe', country: 'Europe' }
-  if (/\b(middle east|israel|jordan|saudi arabia|dubai|uae|iran|iraq|qatar|kuwait|bahrain|oman|lebanon|turkey)\b/.test(text)) return { region: 'Middle East', country: 'Middle East' }
-  if (/\b(latin america|brazil|mexico|colombia|argentina|chile|peru|ecuador|venezuela|costa rica|panama)\b/.test(text)) return { region: 'Latin America', country: 'Latin America' }
-  if (/\b(canada|united states|usa|america|california|new york|texas|florida|chicago)\b/.test(text)) return { region: 'North America', country: 'North America' }
+
+  for (const entry of COUNTRY_PATTERNS) {
+    if (entry.pattern.test(text)) {
+      return { region: entry.region, country: entry.country }
+    }
+  }
+
   return { region: 'Global', country: 'International' }
 }

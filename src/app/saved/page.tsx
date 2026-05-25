@@ -22,20 +22,29 @@ export default function SavedPage() {
   }, [status, router])
 
   useEffect(() => {
-    if (session) {
-      fetch('/api/saved')
-        .then(r => r.json())
-        .then(async (ids: string[]) => {
-          const validIds = Array.isArray(ids) ? ids : []
-          setSavedIds(validIds)
-          if (validIds.length > 0) {
-            const arts = await fetch(`/api/news?ids=${validIds.join(',')}`).then(r => r.json())
-            setSavedArticles(Array.isArray(arts) ? arts : [])
-          }
-          setLoading(false)
-        })
-        .catch(() => setLoading(false))
-    }
+    if (!session) return
+    fetch('/api/saved?full=true')
+      .then(r => r.json())
+      .then(async (entries: Array<{ articleId: string; snapshot: Article | null }>) => {
+        if (!Array.isArray(entries)) { setLoading(false); return }
+        const ids = entries.map(e => e.articleId)
+        setSavedIds(ids)
+
+        if (ids.length === 0) { setLoading(false); return }
+
+        // Fetch live articles from DB
+        const liveArts: Article[] = await fetch(`/api/news?ids=${ids.join(',')}`).then(r => r.json()).catch(() => [])
+        const liveMap = new Map((Array.isArray(liveArts) ? liveArts : []).map(a => [a.id, a]))
+
+        // For each saved entry, use live article if available, else fall back to snapshot
+        const resolved: Article[] = entries
+          .map(e => liveMap.get(e.articleId) ?? e.snapshot ?? null)
+          .filter((a): a is Article => a !== null)
+
+        setSavedArticles(resolved)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }, [session])
 
   const handleToggleSave = async (articleId: string) => {

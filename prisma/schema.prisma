@@ -22,6 +22,7 @@ model SavedArticle {
   articleId String
   userId    String
   savedAt   DateTime @default(now())
+  snapshot  String   @default("") @db.Text
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, articleId])
@@ -33,6 +34,18 @@ model UserPreference {
   regions    String @default("[]") @db.Text
   categories String @default("[]") @db.Text
   user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ArticleSubmission {
+  id          String   @id @default(cuid())
+  authorName  String
+  authorEmail String
+  title       String   @db.Text
+  summary     String   @db.Text
+  articleUrl  String   @db.Text
+  category    String   @default("Community")
+  status      String   @default("pending")
+  submittedAt DateTime @default(now())
 }
 
 model FetchedArticle {

@@ -9,9 +9,10 @@ interface SaveButtonProps {
   articleId: string
   initialSaved?: boolean
   size?: 'sm' | 'md' | 'lg'
+  articleData?: object
 }
 
-export function SaveButton({ articleId, initialSaved = false, size = 'md' }: SaveButtonProps) {
+export function SaveButton({ articleId, initialSaved = false, size = 'md', articleData }: SaveButtonProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const [saved, setSaved] = useState(initialSaved)
@@ -37,7 +38,7 @@ export function SaveButton({ articleId, initialSaved = false, size = 'md' }: Sav
       const res = await fetch('/api/saved', {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId }),
+        body: JSON.stringify({ articleId, articleData: !saved ? articleData : undefined }),
       })
       if (res.ok) setSaved(!saved)
     } catch {

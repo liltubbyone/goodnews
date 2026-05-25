@@ -87,6 +87,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(articles.filter(a => a.featured).slice(0, 6), noCache)
   }
 
+  // Return distinct categories that have at least one article published today
+  if (type === 'active-categories') {
+    const todayCutoff = new Date()
+    todayCutoff.setHours(0, 0, 0, 0)
+    const rows = await prisma.fetchedArticle.findMany({
+      where: { publishedAt: { gte: todayCutoff } },
+      select: { category: true },
+      distinct: ['category'],
+    })
+    return NextResponse.json(rows.map(r => r.category), noCache)
+  }
+
   const filtered = articles.filter(a => matchesFilters(a, query, region, category))
   return NextResponse.json(filtered, noCache)
 }

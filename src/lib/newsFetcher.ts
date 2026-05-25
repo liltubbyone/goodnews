@@ -166,7 +166,7 @@ async function fetchFromNewsdata(): Promise<{ fetched: number; stored: number }>
         seenIds.add(a.article_id)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 40) candidates.push({ ...a, summary, score })
+        if (score >= 60) candidates.push({ ...a, summary, score })
       }
     } catch (err) {
       console.error(`[GoodNews/NewsData] category=${config.category}:`, err)
@@ -253,7 +253,7 @@ async function fetchFromGuardian(): Promise<{ fetched: number; stored: number }>
         seenUrls.add(a.webUrl)
         const summary = a.fields?.trailText ?? a.webTitle
         const score   = scorePositivity(a.webTitle, summary)
-        if (score >= 40) candidates.push({ ...a, score })
+        if (score >= 60) candidates.push({ ...a, score })
       }
     } catch (err) {
       console.error(`[GoodNews/Guardian] q=${config.q}:`, err)
@@ -333,7 +333,7 @@ async function fetchFromGnews(): Promise<{ fetched: number; stored: number }> {
         seenUrls.add(a.url)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 40) candidates.push({ ...a, score })
+        if (score >= 60) candidates.push({ ...a, score })
       }
     } catch (err) {
       console.error(`[GoodNews/GNews] q=${q}:`, err)
@@ -416,7 +416,7 @@ async function fetchFromNewsApi(): Promise<{ fetched: number; stored: number }> 
         seenUrls.add(a.url)
         const summary = a.description ?? a.title
         const score   = scorePositivity(a.title, summary)
-        if (score >= 40) candidates.push({ ...a, score })
+        if (score >= 60) candidates.push({ ...a, score })
       }
     } catch (err) {
       console.error(`[GoodNews/NewsAPI] q=${q}:`, err)
@@ -490,6 +490,24 @@ export async function fetchAllSources(): Promise<{
 export async function wipeAllArticles(): Promise<number> {
   const result = await prisma.fetchedArticle.deleteMany({})
   console.log(`[GoodNews] Wiped all ${result.count} articles from DB`)
+  return result.count
+}
+
+// Delete the oldest (count - keep) articles so the DB stays under the threshold.
+// Keeps the `keep` newest articles intact.
+export async function deleteOldestArticles(keep: number): Promise<number> {
+  const total = await prisma.fetchedArticle.count()
+  const toDelete = total - keep
+  if (toDelete <= 0) return 0
+  // Find the IDs of the oldest articles
+  const oldest = await prisma.fetchedArticle.findMany({
+    orderBy: { fetchedAt: 'asc' },
+    take: toDelete,
+    select: { id: true },
+  })
+  const ids = oldest.map(a => a.id)
+  const result = await prisma.fetchedArticle.deleteMany({ where: { id: { in: ids } } })
+  console.log(`[GoodNews] Deleted ${result.count} oldest articles, kept ${keep}`)
   return result.count
 }
 

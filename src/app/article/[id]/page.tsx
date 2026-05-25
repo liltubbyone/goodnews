@@ -213,7 +213,7 @@ export default async function ArticlePage({ params }: Props) {
               <Clock className="w-4 h-4" /> {article.readTime} min read
             </span>
             <span className="ml-auto">
-              <SaveButton articleId={article.id} size="md" />
+              <SaveButton articleId={article.id} size="md" articleData={article} />
             </span>
           </div>
 
@@ -299,7 +299,7 @@ export default async function ArticlePage({ params }: Props) {
           {/* Save */}
           <div className="bg-brand-50 rounded-xl p-5 border border-brand-100">
             <p className="text-sm text-brand-800 font-semibold mb-3">Enjoy this story?</p>
-            <SaveButton articleId={article.id} size="lg" />
+            <SaveButton articleId={article.id} size="lg" articleData={article} />
             <p className="text-xs text-brand-600 mt-2">Save it to read later or share with friends.</p>
           </div>
 

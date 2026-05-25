@@ -26,13 +26,15 @@ export default function HomePage() {
   const [featuredArticles, setFeaturedArticles] = useState<Article[]>([])
   const [trendingArticles, setTrendingArticles] = useState<Article[]>([])
   const [filteredArticles, setFilteredArticles] = useState<Article[]>([])
+  const [activeCategories, setActiveCategories] = useState<string[]>([])
 
   const featuredHero = featuredArticles[0]
   const heroSide = featuredArticles.slice(1, 4)
 
   useEffect(() => {
     fetch('/api/news?type=featured', { cache: 'no-store' }).then(r => r.json()).then(setFeaturedArticles).catch(() => {})
-    fetch('/api/news?type=featured', { cache: 'no-store' }).then(r => r.json()).then(setTrendingArticles).catch(() => {})
+    fetch('/api/news?type=trending', { cache: 'no-store' }).then(r => r.json()).then(setTrendingArticles).catch(() => {})
+    fetch('/api/news?type=active-categories', { cache: 'no-store' }).then(r => r.json()).then(setActiveCategories).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -55,10 +57,12 @@ export default function HomePage() {
     if (!session) return
     const isSaved = savedIds.includes(articleId)
     const method = isSaved ? 'DELETE' : 'POST'
+    const allArticles = [...featuredArticles, ...trendingArticles, ...filteredArticles]
+    const articleData = !isSaved ? allArticles.find(a => a.id === articleId) : undefined
     await fetch('/api/saved', {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ articleId }),
+      body: JSON.stringify({ articleId, articleData }),
     })
     setSavedIds(prev => isSaved ? prev.filter(id => id !== articleId) : [...prev, articleId])
   }
@@ -124,15 +128,20 @@ export default function HomePage() {
           <h2 className="section-title">Browse by Category</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {CATEGORIES.map(cat => (
-            <Link
-              key={cat}
-              href={`/search?category=${encodeURIComponent(cat)}`}
-              className={`text-center py-3 px-2 rounded-xl text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer ${CATEGORY_COLORS[cat] ?? 'bg-gray-100 text-gray-700'}`}
-            >
-              {cat}
-            </Link>
-          ))}
+          {CATEGORIES.map(cat => {
+            const isActive = activeCategories.length === 0 || activeCategories.includes(cat)
+            return (
+              <Link
+                key={cat}
+                href={`/search?category=${encodeURIComponent(cat)}`}
+                className={`text-center py-3 px-2 rounded-xl text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer ${
+                  isActive ? (CATEGORY_COLORS[cat] ?? 'bg-gray-100 text-gray-700') : 'bg-gray-100 text-gray-400'
+                }`}
+              >
+                {cat}
+              </Link>
+            )
+          })}
         </div>
       </section>
 

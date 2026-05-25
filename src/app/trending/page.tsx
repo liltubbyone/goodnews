@@ -29,16 +29,11 @@ function dbToArticle(a: any): Article {
 }
 
 export default async function TrendingPage() {
-  const cutoff = new Date(Date.now() - 49 * 60 * 60 * 1000)
   const rows = await prisma.fetchedArticle.findMany({
-    where: { publishedAt: { gte: cutoff } },
     orderBy: [{ positivityScore: 'desc' }, { publishedAt: 'desc' }],
-    take: 100,
+    take: 20,
   })
-  let allArticles = rows.map(dbToArticle)
-  const flagged = allArticles.filter(a => a.trending)
-  const byScore = allArticles.filter(a => !a.trending).sort((a, b) => b.positivityScore - a.positivityScore)
-  const trending = [...flagged, ...byScore].slice(0, 20)
+  const trending = rows.map(dbToArticle)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

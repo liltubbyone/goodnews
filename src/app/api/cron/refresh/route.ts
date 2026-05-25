@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchAllSources, wipeAllArticles, getLiveFetchedArticleCount } from '@/lib/newsFetcher'
+import { fetchAllSources, deleteOldestArticles, getLiveFetchedArticleCount } from '@/lib/newsFetcher'
 
 // Triggered daily at 12:30 AM CST via GitHub Actions.
 // Protect by setting CRON_SECRET in Vercel environment variables.
 
 const DB_WIPE_THRESHOLD = 9999
+const DB_KEEP_AFTER_TRIM = 999
 
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
@@ -20,12 +21,11 @@ export async function GET(req: NextRequest) {
 
   const now = new Date()
 
-  // Wipe DB if it has reached the threshold, then fetch fresh articles
+  // If DB hits 9999, delete the oldest 9000 articles and keep the newest 999
   const count = await getLiveFetchedArticleCount()
-  let wiped = false
+  let trimmed = 0
   if (count >= DB_WIPE_THRESHOLD) {
-    await wipeAllArticles()
-    wiped = true
+    trimmed = await deleteOldestArticles(DB_KEEP_AFTER_TRIM)
   }
 
   const result = await fetchAllSources()
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     success: true,
     timestamp: now.toISOString(),
     dbCountBefore: count,
-    wiped,
+    trimmed,
     ...result,
   })
 }
